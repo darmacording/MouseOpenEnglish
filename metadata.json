@@ -1,0 +1,6 @@
+{
+  "name": "EBS 입트영 AI 스터디 메이트",
+  "description": "EBS 입이 트이는 영어 교재 촬영 OCR 분석, 10개 핵심 어휘 추출, 무한 객관식 퀴즈, AI 실시간 주관식 한 줄 영작 검토, 플래시카드, AI 회화 튜터 스터디 메이트",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

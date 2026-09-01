@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>EBS 입트영 AI 스터디 메이트</title>
+    <meta name="description" content="EBS 입이 트이는 영어 교재 OCR 본문 분석, 10개 핵심 어휘 추출, 무한 퀴즈, 플래시카드, AI 회화 튜터 스터디 메이트">
+    <meta property="og:title" content="EBS 입트영 AI 스터디 메이트">
+    <meta property="og:description" content="EBS 입이 트이는 영어 교재 OCR 본문 분석, 10개 핵심 어휘 추출, 무한 퀴즈, 플래시카드, AI 회화 튜터 스터디 메이트">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome 6 CDN -->
@@ -117,7 +120,7 @@
                 </span>
             </div>
 
-            <!-- Desktop & Tablet Navigation Tabs (5 Tabs) -->
+            <!-- Desktop & Tablet Navigation Tabs (6 Tabs) -->
             <div class="hidden md:flex bg-slate-100 p-1 rounded-xl w-full md:w-auto overflow-x-auto text-xs sm:text-sm font-medium no-scrollbar">
                 <button id="tabUpload" onclick="switchTab('upload')" class="tab-btn px-3 py-2 rounded-lg transition flex items-center gap-1.5 whitespace-nowrap bg-white text-indigo-700 shadow-sm font-bold">
                     <i class="fa-solid fa-camera"></i> 촬영/본문추출
@@ -127,6 +130,9 @@
                 </button>
                 <button id="tabQuiz" onclick="switchTab('quiz')" class="tab-btn px-3 py-2 rounded-lg transition flex items-center gap-1.5 whitespace-nowrap text-slate-600 hover:text-indigo-600">
                     <i class="fa-solid fa-gamepad"></i> 무한 5개 퀴즈
+                </button>
+                <button id="tabWriting" onclick="switchTab('writing')" class="tab-btn px-3 py-2 rounded-lg transition flex items-center gap-1.5 whitespace-nowrap text-slate-600 hover:text-indigo-600">
+                    <i class="fa-solid fa-pen-nib text-indigo-600"></i> 주관식 영작퀴즈
                 </button>
                 <button id="tabPractice" onclick="switchTab('practice')" class="tab-btn px-3 py-2 rounded-lg transition flex items-center gap-1.5 whitespace-nowrap text-slate-600 hover:text-indigo-600">
                     <i class="fa-solid fa-repeat"></i> 무한 플래시카드
@@ -142,75 +148,65 @@
             <div class="bg-gradient-to-br from-indigo-900 via-indigo-800 to-slate-900 text-white rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl relative overflow-hidden">
                 <div class="absolute -right-8 -bottom-8 opacity-10 text-8xl font-black">EBS</div>
                 <div class="max-w-2xl relative z-10">
-                    <span class="bg-amber-400 text-indigo-950 font-extrabold text-[10px] sm:text-xs px-2 py-0.5 rounded uppercase tracking-wider mb-2 inline-block">영어 / 한글 / 한영 혼용 교재 10개 핵심 어휘 추출</span>
-                    <h2 class="text-xl sm:text-2xl md:text-3xl font-extrabold mb-1.5 leading-tight">오늘의 입트영 교재 사진이나 본문을 올려주세요!</h2>
+                    <span class="bg-amber-400 text-indigo-950 font-extrabold text-[10px] sm:text-xs px-2 py-0.5 rounded uppercase tracking-wider mb-2 inline-block">교재 사진 OCR & 10개 핵심 어휘 추출</span>
+                    <h2 class="text-xl sm:text-2xl md:text-3xl font-extrabold mb-1.5 leading-tight">오늘의 입트영 교재 사진을 올려주세요!</h2>
                     <p class="text-indigo-200 text-xs sm:text-sm leading-relaxed">
-                        교재의 <strong>영어 원문</strong>, <strong>한글 해설</strong>, 또는 <strong>필기 사진/텍스트</strong> 무엇이든 OK! Gemini 3 Flash가 사진 속 본문을 정확히 추출하고 <strong>10개의 핵심 영단어 & 표현 세트</strong>와 <strong>원어민 스튜디오 오디오</strong>를 생성합니다.
+                        스마트폰 카메라로 교재 페이지를 찍거나 갤러리 사진을 선택하세요. Gemini 3 Flash가 사진 속 본문을 정확히 판독(OCR)하고 <strong>10개의 핵심 영단어 & 표현 세트</strong>, <strong>원어민 오디오</strong>, <strong>주관식 영작 퀴즈</strong>를 자동으로 생성합니다.
                     </p>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                <!-- Dropzone / Mobile Camera & Gallery Input -->
-                <div class="bg-white p-5 md:p-6 rounded-2xl border-2 border-dashed border-indigo-200 hover:border-indigo-400 transition flex flex-col items-center justify-center text-center gap-3 relative" id="dropzone">
-                    <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden" onchange="handleImageSelect(event)">
-                    <input type="file" id="imageInput" accept="image/*" class="hidden" onchange="handleImageSelect(event)">
+            <!-- Single Full-Width Photo Dropzone & Action Area -->
+            <div class="bg-white p-6 md:p-8 rounded-3xl border-2 border-dashed border-indigo-200 hover:border-indigo-400 transition flex flex-col items-center justify-center text-center gap-4 relative shadow-sm" id="dropzone">
+                <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden" onchange="handleImageSelect(event)">
+                <input type="file" id="imageInput" accept="image/*" class="hidden" onchange="handleImageSelect(event)">
+                
+                <div id="uploadPlaceholder" class="flex flex-col items-center gap-3 py-6 w-full max-w-lg">
+                    <div class="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center text-3xl shadow-inner mb-1">
+                        <i class="fa-solid fa-camera"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-extrabold text-slate-800 text-base sm:text-lg">교재 사진 촬영 또는 갤러리 선택</h3>
+                        <p class="text-xs sm:text-sm text-slate-500 mt-1">EBS 입트영 교재 페이지(영어 원문 또는 한글 해석)를 선명하게 찍어주세요</p>
+                    </div>
                     
-                    <div id="uploadPlaceholder" class="flex flex-col items-center gap-2.5 py-4 w-full">
-                        <div class="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center text-2xl shadow-inner">
-                            <i class="fa-solid fa-camera"></i>
-                        </div>
-                        <div>
-                            <p class="font-bold text-slate-800 text-sm sm:text-base">교재 사진 촬영 / 갤러리 선택</p>
-                            <p class="text-xs text-slate-400 mt-0.5">영어/한글 교재 페이지를 선명하게 찍어주세요</p>
-                        </div>
-                        
-                        <div class="flex flex-col sm:flex-row gap-2 w-full max-w-xs mt-2">
-                            <button onclick="document.getElementById('cameraInput').click()" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs sm:text-sm font-bold px-4 py-3 rounded-xl transition shadow-md flex items-center justify-center gap-2 w-full">
-                                <i class="fa-solid fa-camera"></i> 카메라 촬영하기
-                            </button>
-                            <button onclick="document.getElementById('imageInput').click()" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-xs sm:text-sm font-bold px-4 py-3 rounded-xl transition border border-slate-300 flex items-center justify-center gap-2 w-full">
-                                <i class="fa-solid fa-images"></i> 갤러리 선택
-                            </button>
-                        </div>
+                    <div class="flex flex-col sm:flex-row gap-3 w-full mt-3">
+                        <button onclick="document.getElementById('cameraInput').click()" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-sm font-bold px-6 py-3.5 rounded-2xl transition shadow-md flex items-center justify-center gap-2 w-full">
+                            <i class="fa-solid fa-camera text-base"></i> 카메라로 촬영하기
+                        </button>
+                        <button onclick="document.getElementById('imageInput').click()" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-sm font-bold px-6 py-3.5 rounded-2xl transition border border-slate-300 flex items-center justify-center gap-2 w-full">
+                            <i class="fa-solid fa-images text-base"></i> 갤러리에서 선택
+                        </button>
                     </div>
 
-                    <!-- Image Preview -->
-                    <div id="imagePreviewContainer" class="hidden w-full flex flex-col items-center gap-2">
-                        <img id="imagePreview" class="max-h-56 rounded-xl object-contain shadow border border-slate-200" alt="본문 사진 미리보기">
-                        <div class="flex gap-3">
-                            <button onclick="document.getElementById('cameraInput').click()" class="text-xs text-indigo-600 font-bold hover:underline py-1">
-                                <i class="fa-solid fa-rotate"></i> 다시 찍기
-                            </button>
-                        </div>
+                    <div class="mt-2 pt-3 border-t border-slate-100 w-full flex justify-center">
+                        <button onclick="loadSampleLessonDirectly()" class="text-xs text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-1.5 py-1 px-3 rounded-lg hover:bg-indigo-50 transition">
+                            <i class="fa-regular fa-lightbulb text-amber-500"></i> 샘플 교재로 먼저 둘러보기
+                        </button>
                     </div>
                 </div>
 
-                <!-- Manual Text Input / Sample Trigger -->
-                <div class="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between gap-3">
-                    <div>
-                        <div class="flex items-center justify-between mb-2">
-                            <h3 class="font-bold text-slate-800 text-xs sm:text-sm flex items-center gap-1.5">
-                                <i class="fa-solid fa-pen-to-square text-indigo-500"></i> 직접 텍스트 입력하기 (영어/한글)
-                            </h3>
-                            <button onclick="loadSampleText()" class="text-[11px] bg-amber-100 hover:bg-amber-200 active:scale-95 text-amber-900 font-bold px-2.5 py-1 rounded-md transition">
-                                샘플 예시 넣기
-                            </button>
-                        </div>
-                        <textarea id="manualTextInput" rows="4" placeholder="사진 대신 본문 텍스트(영어 또는 한글)를 직접 붙여넣으셔도 AI가 10개 영단어/표현과 원어민 오디오를 자동으로 생성합니다." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-none"></textarea>
+                <!-- Image Preview & Analyze Action -->
+                <div id="imagePreviewContainer" class="hidden w-full max-w-xl flex flex-col items-center gap-4 py-2">
+                    <div class="relative w-full flex justify-center">
+                        <img id="imagePreview" class="max-h-72 sm:max-h-80 rounded-2xl object-contain shadow-md border border-slate-200 bg-slate-50" alt="본문 사진 미리보기">
                     </div>
-
-                    <button id="analyzeBtn" onclick="analyzePassageWithGemini()" class="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg transition flex items-center justify-center gap-2 disabled:opacity-50 text-sm">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i>
-                        <span>본문 분석 & 10개 단어/표현 추출</span>
-                    </button>
+                    <div class="flex flex-col sm:flex-row gap-2.5 w-full">
+                        <button id="analyzeBtn" onclick="analyzePassageWithGemini()" class="flex-1 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 active:scale-95 text-white font-extrabold py-3.5 px-6 rounded-2xl shadow-lg transition flex items-center justify-center gap-2 text-sm sm:text-base">
+                            <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i>
+                            <span>교재 사진 본문 분석 & 10개 어휘 추출</span>
+                        </button>
+                        <button onclick="document.getElementById('cameraInput').click()" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-xs sm:text-sm font-bold px-4 py-3.5 rounded-2xl transition border border-slate-200 flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-rotate"></i> 다시 찍기
+                        </button>
+                    </div>
                 </div>
             </div>
 
             <!-- Loading Spinner -->
             <div id="loadingState" class="hidden bg-white p-6 md:p-8 rounded-2xl shadow-md border border-slate-200 text-center flex flex-col items-center justify-center gap-2">
                 <div class="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-                <h4 class="font-bold text-slate-800 text-sm sm:text-base">Gemini 3 Flash AI가 교재 이미지/텍스트를 정밀 분석 중입니다...</h4>
+                <h4 class="font-bold text-slate-800 text-sm sm:text-base">Gemini 3 Flash AI가 교재 이미지를 정밀 분석 중입니다...</h4>
                 <p class="text-xs text-slate-500">정밀 OCR 문자 판독 및 10개 핵심 단어/표현 퀴즈 세트를 생성하고 있습니다.</p>
             </div>
 
@@ -289,7 +285,204 @@
             </div>
         </section>
 
-        <!-- TAB 4: INFINITE REPETITION PRACTICE -->
+        <!-- TAB 4: SUBJECTIVE ENGLISH WRITING QUIZ (주관식 영작퀴즈) -->
+        <section id="viewWriting" class="tab-content hidden flex flex-col gap-4 md:gap-6">
+            <!-- Header Banner -->
+            <div class="bg-gradient-to-r from-indigo-900 via-purple-900 to-slate-900 text-white p-5 md:p-6 rounded-3xl shadow-lg relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div class="space-y-1">
+                    <span class="bg-amber-400 text-indigo-950 font-black text-[10px] sm:text-xs px-2.5 py-0.5 rounded-full uppercase tracking-wider inline-block">AI 실시간 영작 첨삭 & 검토</span>
+                    <h2 class="text-xl sm:text-2xl font-extrabold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-pen-nib text-amber-400"></i> 주관식 한 줄 영작 퀴즈
+                    </h2>
+                    <p class="text-indigo-200 text-xs sm:text-sm">
+                        교재 본문에서 추출된 전체 문장을 한 줄씩 그대로 영작해 보세요. 10개로 한정되지 않고 본문 전체 문장을 모두 연습할 수 있습니다!
+                    </p>
+                </div>
+                <div class="flex items-center gap-2 self-end md:self-auto">
+                    <button onclick="shuffleWritingSentences()" class="bg-white/10 hover:bg-white/20 active:scale-95 text-white text-xs font-bold px-3 py-2 rounded-xl transition border border-white/20 flex items-center gap-1.5 whitespace-nowrap">
+                        <i class="fa-solid fa-shuffle"></i> 순서 섞기
+                    </button>
+                    <button onclick="resetWritingSession()" class="bg-amber-400 hover:bg-amber-300 text-indigo-950 text-xs font-extrabold px-3 py-2 rounded-xl transition shadow active:scale-95 flex items-center gap-1.5 whitespace-nowrap">
+                        <i class="fa-solid fa-rotate-left"></i> 처음부터
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mode Selector (Passage Sentences vs 10 Vocab Items) -->
+            <div class="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-2 p-1 bg-slate-100 rounded-xl overflow-x-auto">
+                    <button id="modePassageBtn" onclick="setupWritingQuiz(true, 'passage')" class="px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition shadow-sm bg-indigo-600 text-white flex items-center gap-1.5 whitespace-nowrap active:scale-95">
+                        <i class="fa-solid fa-book-open"></i>
+                        <span>본문 전체 문장 영작 (<span id="passageCountBadge">전체 문장</span>)</span>
+                    </button>
+                    <button id="modeVocabBtn" onclick="setupWritingQuiz(true, 'vocab')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 hover:text-indigo-600 flex items-center gap-1.5 whitespace-nowrap active:scale-95">
+                        <i class="fa-solid fa-key"></i>
+                        <span>핵심 어휘 10개 예문</span>
+                    </button>
+                </div>
+                <div class="flex items-center justify-between sm:justify-end gap-3 text-xs font-bold text-slate-600 px-1">
+                    <span class="text-slate-500">첨삭 완료:</span>
+                    <span id="reviewedWritingCount" class="bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-md font-black text-xs">0개 / 0개</span>
+                </div>
+            </div>
+
+            <!-- Sentence Quick Jump Navigator (Scrollable numbered buttons) -->
+            <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-2.5">
+                <div class="flex items-center justify-between px-1">
+                    <span class="text-[11px] font-black text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-list-ol text-indigo-500"></i> 문장 바로가기 (Quick Jump)
+                    </span>
+                    <span id="writingStepBadge" class="text-xs font-extrabold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100">
+                        문장 <span id="currentWritingNumber">1</span> / <span id="totalWritingCount">10</span>
+                    </span>
+                </div>
+                <div id="writingSentencePills" class="flex items-center gap-1.5 overflow-x-auto py-1 no-scrollbar">
+                    <!-- Dynamic Pill Buttons Injected Here -->
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden mt-0.5">
+                    <div id="writingProgressBar" class="bg-gradient-to-r from-indigo-500 to-purple-600 h-2 rounded-full transition-all duration-300" style="width: 10%;"></div>
+                </div>
+            </div>
+
+            <!-- Main Question & Writing Area Card -->
+            <div class="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200 shadow-md flex flex-col gap-5">
+                <!-- Korean Prompt -->
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5 relative">
+                    <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                        <span id="writingSentenceTypeTag" class="text-[11px] font-extrabold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded border border-indigo-100 uppercase tracking-wider flex items-center gap-1">
+                            <i class="fa-solid fa-file-lines text-indigo-500"></i> <span id="sentenceOrderLabel">본문 1번째 문장</span>
+                        </span>
+                        <div id="writingTargetBadge" class="text-[11px] font-bold text-amber-900 bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
+                            <i class="fa-solid fa-key text-amber-600"></i>
+                            <span>핵심 포인트: <strong id="writingTargetKeyword">stay in shape</strong></span>
+                        </div>
+                    </div>
+                    <p id="writingKoreanPrompt" class="text-base sm:text-xl font-extrabold text-slate-900 leading-relaxed font-sans">
+                        "균형 잡힌 식사는 건강을 유지하는 데 도움이 됩니다."
+                    </p>
+                </div>
+
+                <!-- Hint Area (Collapsible) -->
+                <div class="flex items-center justify-between">
+                    <button onclick="toggleWritingHint()" id="toggleHintBtn" class="text-xs font-bold text-slate-500 hover:text-indigo-600 flex items-center gap-1.5 transition">
+                        <i class="fa-regular fa-lightbulb text-amber-500"></i> <span>영작 힌트 보기</span>
+                    </button>
+                    <button onclick="showWritingDirectModelAnswer()" class="text-xs font-bold text-slate-400 hover:text-slate-700 flex items-center gap-1 transition">
+                        <i class="fa-regular fa-eye"></i> 모범 답안 바로 확인
+                    </button>
+                </div>
+                <div id="writingHintBox" class="hidden bg-amber-50/70 border border-amber-200 rounded-xl p-3.5 text-xs text-amber-950 space-y-1">
+                    <p id="writingHintText" class="font-medium leading-relaxed"></p>
+                </div>
+
+                <!-- User English Input -->
+                <div class="space-y-2">
+                    <label for="writingUserInput" class="text-xs font-extrabold text-slate-700 flex items-center justify-between">
+                        <span><i class="fa-solid fa-keyboard text-indigo-500 mr-1"></i> 영어 문장 직접 작성</span>
+                        <span id="writingCharCount" class="text-slate-400 font-normal text-[11px]">0 자 입력됨</span>
+                    </label>
+                    <textarea id="writingUserInput" rows="3" oninput="updateWritingCharCount()" placeholder="위 한글 문장의 영어 번역을 직접 작성해 보세요 (스펠링, 시제, 관사에 유의하세요)..." class="w-full bg-slate-50 border border-slate-300 focus:border-indigo-500 rounded-2xl p-4 text-sm sm:text-base text-slate-900 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition resize-none font-sans"></textarea>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                        <button onclick="prevWritingItem()" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-xs sm:text-sm font-bold px-4 py-3 rounded-xl transition flex items-center justify-center gap-1.5 w-1/2 sm:w-auto">
+                            <i class="fa-solid fa-arrow-left"></i> 이전 문장
+                        </button>
+                        <button onclick="nextWritingItem()" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-xs sm:text-sm font-bold px-4 py-3 rounded-xl transition flex items-center justify-center gap-1.5 w-1/2 sm:w-auto">
+                            다음 문장 <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+
+                    <button id="submitWritingBtn" onclick="submitWritingAnswer()" class="w-full sm:w-auto bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-700 hover:to-purple-700 active:scale-95 text-white font-extrabold text-sm sm:text-base px-6 py-3.5 rounded-2xl shadow-lg transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i>
+                        <span>AI 영작 첨삭 & 검토받기</span>
+                    </button>
+                </div>
+
+                <!-- Review Loading State -->
+                <div id="writingReviewLoading" class="hidden bg-indigo-50/60 border border-indigo-100 rounded-2xl p-6 text-center flex flex-col items-center justify-center gap-2">
+                    <div class="w-8 h-8 border-4 border-indigo-300 border-t-indigo-600 rounded-full animate-spin"></div>
+                    <p class="font-bold text-indigo-900 text-xs sm:text-sm">Gemini AI가 문법, 어휘, 전치사, 원어민 뉘앙스를 정밀 첨삭 중입니다...</p>
+                </div>
+
+                <!-- AI Review Result Feedback Card -->
+                <div id="writingReviewResultCard" class="hidden flex flex-col gap-4 border-t border-slate-200 pt-5">
+                    <!-- Score & Evaluation Banner -->
+                    <div id="writingScoreBanner" class="p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div class="flex items-center gap-3">
+                            <div id="writingScoreBadge" class="w-14 h-14 rounded-2xl flex flex-col items-center justify-center font-black shadow text-white">
+                                <span id="writingScoreValue" class="text-xl leading-none">95</span>
+                                <span class="text-[9px] uppercase font-bold">Score</span>
+                            </div>
+                            <div>
+                                <h4 id="writingEvalTitle" class="text-base sm:text-lg font-black text-slate-900">완벽해요! 🎉</h4>
+                                <p id="writingEvalSummary" class="text-xs text-slate-600">자연스럽고 문법적으로 훌륭한 영작입니다.</p>
+                            </div>
+                        </div>
+                        <button onclick="playModelSentenceAudio()" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow flex items-center gap-1.5 self-end sm:self-auto">
+                            <i class="fa-solid fa-volume-high"></i> 모범 답안 음성 듣기
+                        </button>
+                    </div>
+
+                    <!-- Comparison & Feedback Details -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <!-- My Writing vs AI Polished -->
+                        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col justify-between gap-3">
+                            <div>
+                                <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">내 영작 (Your Writing)</span>
+                                <p id="reviewUserSentence" class="text-sm font-semibold text-slate-800 font-sans"></p>
+                            </div>
+                            <div class="pt-2 border-t border-slate-200">
+                                <span class="text-[11px] font-extrabold text-indigo-700 uppercase tracking-wider block mb-1 flex items-center gap-1">
+                                    <i class="fa-solid fa-circle-check text-indigo-600"></i> AI 정밀 교정본 (Polished)
+                                </span>
+                                <p id="reviewCorrectedSentence" class="text-sm font-extrabold text-indigo-950 font-sans"></p>
+                            </div>
+                        </div>
+
+                        <!-- Reference Standard EBS Answer -->
+                        <div class="bg-indigo-50/50 border border-indigo-200 rounded-2xl p-4 flex flex-col justify-between gap-2">
+                            <div>
+                                <span class="text-[11px] font-extrabold text-indigo-900 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                                    <span><i class="fa-solid fa-star text-amber-500"></i> EBS 추천 모범 영작문</span>
+                                    <span class="text-[10px] text-indigo-600 font-normal">표준 원어민 표현</span>
+                                </span>
+                                <p id="reviewReferenceSentence" class="text-sm sm:text-base font-extrabold text-indigo-950 font-sans leading-snug"></p>
+                            </div>
+                            <div id="writingKeyPointsBox" class="pt-2 border-t border-indigo-100 text-xs text-indigo-900 space-y-1">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detailed AI Feedback Comment -->
+                    <div class="bg-purple-50/60 border border-purple-200 rounded-2xl p-4 space-y-1.5">
+                        <h5 class="text-xs font-extrabold text-purple-900 flex items-center gap-1.5">
+                            <i class="fa-solid fa-comments text-purple-600"></i> Gemini AI 튜터의 상세 첨삭 피드백
+                        </h5>
+                        <p id="reviewFeedbackContent" class="text-xs sm:text-sm text-purple-950 leading-relaxed whitespace-pre-line"></p>
+                    </div>
+
+                    <!-- Native Alternative Expressions -->
+                    <div id="writingAlternativesBox" class="bg-white border border-slate-200 rounded-2xl p-4 space-y-2">
+                        <h5 class="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
+                            <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i> 원어민 실생활 추천 대안 표현 (Native Variations)
+                        </h5>
+                        <div id="writingAlternativesList" class="space-y-2"></div>
+                    </div>
+
+                    <!-- Next Action Button -->
+                    <div class="flex justify-end pt-2">
+                        <button onclick="nextWritingItem()" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-xs sm:text-sm px-5 py-3 rounded-xl transition shadow flex items-center gap-1.5">
+                            <span>다음 문장 영작하기</span> <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 5: INFINITE REPETITION PRACTICE -->
         <section id="viewPractice" class="tab-content hidden flex flex-col gap-4 md:gap-6">
             <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 flex justify-between items-center gap-2">
                 <div>
@@ -378,27 +571,31 @@
 
     </main>
 
-    <!-- MOBILE BOTTOM NAVIGATION BAR (5 Core Tabs) -->
-    <nav class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200 px-1 py-1 pb-safe shadow-lg grid grid-cols-5 text-[10px] font-bold text-slate-500 text-center">
-        <button onclick="switchTab('upload')" id="mobileNavUpload" class="mobile-nav-btn flex flex-col items-center py-1 px-1 rounded-xl text-indigo-600">
-            <i class="fa-solid fa-camera text-lg mb-0.5"></i>
-            <span>본문추출</span>
+    <!-- MOBILE BOTTOM NAVIGATION BAR (6 Core Tabs) -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200 px-1 py-1 pb-safe shadow-lg grid grid-cols-6 text-[9px] font-bold text-slate-500 text-center">
+        <button onclick="switchTab('upload')" id="mobileNavUpload" class="mobile-nav-btn flex flex-col items-center py-1 px-0.5 rounded-xl text-indigo-600">
+            <i class="fa-solid fa-camera text-base mb-0.5"></i>
+            <span class="truncate">본문추출</span>
         </button>
-        <button onclick="switchTab('vocab')" id="mobileNavVocab" class="mobile-nav-btn flex flex-col items-center py-1 px-1 rounded-xl">
-            <i class="fa-solid fa-book-bookmark text-lg mb-0.5"></i>
-            <span>단어/표현</span>
+        <button onclick="switchTab('vocab')" id="mobileNavVocab" class="mobile-nav-btn flex flex-col items-center py-1 px-0.5 rounded-xl">
+            <i class="fa-solid fa-book-bookmark text-base mb-0.5"></i>
+            <span class="truncate">단어/표현</span>
         </button>
-        <button onclick="switchTab('quiz')" id="mobileNavQuiz" class="mobile-nav-btn flex flex-col items-center py-1 px-1 rounded-xl">
-            <i class="fa-solid fa-gamepad text-lg mb-0.5"></i>
-            <span>무한퀴즈</span>
+        <button onclick="switchTab('quiz')" id="mobileNavQuiz" class="mobile-nav-btn flex flex-col items-center py-1 px-0.5 rounded-xl">
+            <i class="fa-solid fa-gamepad text-base mb-0.5"></i>
+            <span class="truncate">객관식</span>
         </button>
-        <button onclick="switchTab('practice')" id="mobileNavPractice" class="mobile-nav-btn flex flex-col items-center py-1 px-1 rounded-xl">
-            <i class="fa-solid fa-repeat text-lg mb-0.5"></i>
-            <span>플래시카드</span>
+        <button onclick="switchTab('writing')" id="mobileNavWriting" class="mobile-nav-btn flex flex-col items-center py-1 px-0.5 rounded-xl">
+            <i class="fa-solid fa-pen-nib text-base mb-0.5"></i>
+            <span class="truncate text-indigo-700">영작퀴즈</span>
         </button>
-        <button onclick="switchTab('aiChat')" id="mobileNavAiChat" class="mobile-nav-btn flex flex-col items-center py-1 px-1 rounded-xl">
-            <i class="fa-solid fa-robot text-lg mb-0.5"></i>
-            <span>AI 튜터</span>
+        <button onclick="switchTab('practice')" id="mobileNavPractice" class="mobile-nav-btn flex flex-col items-center py-1 px-0.5 rounded-xl">
+            <i class="fa-solid fa-repeat text-base mb-0.5"></i>
+            <span class="truncate">플래시</span>
+        </button>
+        <button onclick="switchTab('aiChat')" id="mobileNavAiChat" class="mobile-nav-btn flex flex-col items-center py-1 px-0.5 rounded-xl">
+            <i class="fa-solid fa-robot text-base mb-0.5"></i>
+            <span class="truncate">AI튜터</span>
         </button>
     </nav>
 
@@ -499,6 +696,15 @@
         let quizScore = 0;
         let activeQuizQuestions = [];
 
+        // Writing Quiz State
+        let writingMode = 'passage'; // 'passage' (본문 전체 문장 영작) or 'vocab' (핵심 10개 어휘 예문)
+        let writingList = [];
+        let writingIndex = 0;
+        let reviewedWritingItems = new Set();
+        let writingReviewCache = {};
+        let isWritingReviewing = false;
+        let isWritingHintShown = false;
+
         // Practice State
         let practiceIndex = 0;
         let practiceList = [];
@@ -510,16 +716,66 @@
         let currentAudioElement = null;
         let bestEnglishVoice = null;
 
-        // Default Sample Lesson Data with 10 Vocabulary & Expression items
+        // Default Sample Lesson Data with 10 Vocabulary & Expression items AND Full Passage Sentences
         const SAMPLE_LESSON = {
             date: selectedDate,
             extractedText: `[EBS 입이 트이는 영어 - 본문 원문]
-Many people try to make it a rule to exercise regularly in order to stay in shape. However, continuous overwork and lack of adequate sleep can take a toll on physical health. To maintain wellness, it is essential to cut down on excessive sugar and caffeine intake, and stick to a routine every day. Incorporating cardiovascular activities and allowing your body to recharge its batteries will cultivate long-term consistency in your fitness journey.
+Many people try to make it a rule to exercise regularly in order to stay in shape. However, continuous overwork and lack of adequate sleep can take a toll on physical health. When you feel constantly worn out, even light workouts can feel like an uphill battle. To maintain wellness, it is essential to cut down on excessive sugar and caffeine intake, and stick to a routine every day. In addition, setting realistic fitness goals prevents burnout and helps you stay on track. Incorporating cardiovascular activities and allowing your body to recharge its batteries will cultivate long-term consistency in your fitness journey. Finding a workout buddy can also boost your motivation and keep you accountable. Ultimately, listening to your body's signals is the best way to achieve lifelong health.
 
 (한글 해석)
-많은 사람들이 건강한 몸 상태를 유지하기 위해 규칙적으로 운동하는 것을 원칙으로 삼으려 노력합니다. 하지만 지속적인 과로와 수면 부족은 신체 건강에 큰 부담을 줄 수 있습니다. 건강을 유지하려면 과도한 설탕과 카페인 섭취를 줄이고 매일 규칙적인 일과를 지키는 것이 필수적입니다. 심혈관 운동을 병행하고 몸이 충분히 재충전할 수 있도록 휴식을 취하는 것은 피트니스 여정에서 장기적인 꾸준함을 길러줄 것입니다.`,
-            pureEnglishText: `Many people try to make it a rule to exercise regularly in order to stay in shape. However, continuous overwork and lack of adequate sleep can take a toll on physical health. To maintain wellness, it is essential to cut down on excessive sugar and caffeine intake, and stick to a routine every day. Incorporating cardiovascular activities and allowing your body to recharge its batteries will cultivate long-term consistency in your fitness journey.`,
-            passageSummary: "건강 관리와 규칙적인 운동 습관에 관한 입트영 본문",
+많은 사람들이 건강한 몸 상태를 유지하기 위해 규칙적으로 운동하는 것을 원칙으로 삼으려 노력합니다. 하지만 지속적인 과로와 수면 부족은 신체 건강에 큰 부담을 줄 수 있습니다. 지속적으로 지쳤다고 느낄 때에는 가벼운 운동조차 힘겨운 싸움처럼 느껴질 수 있습니다. 건강을 유지하려면 과도한 설탕과 카페인 섭취를 줄이고 매일 규칙적인 일과를 지키는 것이 필수적입니다. 게다가 현실적인 운동 목표를 세우는 것은 탈진을 예방하고 올바른 방향을 유지하도록 도와줍니다. 심혈관 운동을 병행하고 몸이 충분히 재충전할 수 있도록 휴식을 취하는 것은 피트니스 여정에서 장기적인 꾸준함을 길러줄 것입니다. 함께 운동할 파트너를 찾는 것 역시 동기 부여를 높이고 책임감을 유지하는 데 도움이 됩니다. 궁극적으로 자신의 몸이 보내는 신호에 귀 기울이는 것이 평생 건강을 달성하는 최고의 비결입니다.`,
+            pureEnglishText: `Many people try to make it a rule to exercise regularly in order to stay in shape. However, continuous overwork and lack of adequate sleep can take a toll on physical health. When you feel constantly worn out, even light workouts can feel like an uphill battle. To maintain wellness, it is essential to cut down on excessive sugar and caffeine intake, and stick to a routine every day. In addition, setting realistic fitness goals prevents burnout and helps you stay on track. Incorporating cardiovascular activities and allowing your body to recharge its batteries will cultivate long-term consistency in your fitness journey. Finding a workout buddy can also boost your motivation and keep you accountable. Ultimately, listening to your body's signals is the best way to achieve lifelong health.`,
+            passageSummary: "건강 관리와 규칙적인 운동 습관 및 휴식의 중요성에 관한 입트영 본문",
+            passageSentences: [
+                {
+                    id: 1,
+                    english: "Many people try to make it a rule to exercise regularly in order to stay in shape.",
+                    korean: "많은 사람들이 건강한 몸 상태를 유지하기 위해 규칙적으로 운동하는 것을 원칙으로 삼으려 노력합니다.",
+                    targetKeyword: "make it a rule to, stay in shape"
+                },
+                {
+                    id: 2,
+                    english: "However, continuous overwork and lack of adequate sleep can take a toll on physical health.",
+                    korean: "하지만 지속적인 과로와 수면 부족은 신체 건강에 큰 부담을 줄 수 있습니다.",
+                    targetKeyword: "take a toll on, adequate"
+                },
+                {
+                    id: 3,
+                    english: "When you feel constantly worn out, even light workouts can feel like an uphill battle.",
+                    korean: "지속적으로 지쳤다고 느낄 때에는 가벼운 운동조차 힘겨운 싸움처럼 느껴질 수 있습니다.",
+                    targetKeyword: "worn out, uphill battle"
+                },
+                {
+                    id: 4,
+                    english: "To maintain wellness, it is essential to cut down on excessive sugar and caffeine intake, and stick to a routine every day.",
+                    korean: "건강을 유지하려면 과도한 설탕과 카페인 섭취를 줄이고 매일 규칙적인 일과를 지키는 것이 필수적입니다.",
+                    targetKeyword: "cut down on, stick to a routine"
+                },
+                {
+                    id: 5,
+                    english: "In addition, setting realistic fitness goals prevents burnout and helps you stay on track.",
+                    korean: "게다가 현실적인 운동 목표를 세우는 것은 탈진을 예방하고 올바른 방향을 유지하도록 도와줍니다.",
+                    targetKeyword: "stay on track, burnout"
+                },
+                {
+                    id: 6,
+                    english: "Incorporating cardiovascular activities and allowing your body to recharge its batteries will cultivate long-term consistency in your fitness journey.",
+                    korean: "심혈관 운동을 병행하고 몸이 충분히 재충전할 수 있도록 휴식을 취하는 것은 피트니스 여정에서 장기적인 꾸준함을 길러줄 것입니다.",
+                    targetKeyword: "cardiovascular, recharge one's batteries, consistency"
+                },
+                {
+                    id: 7,
+                    english: "Finding a workout buddy can also boost your motivation and keep you accountable.",
+                    korean: "함께 운동할 파트너를 찾는 것 역시 동기 부여를 높이고 책임감을 유지하는 데 도움이 됩니다.",
+                    targetKeyword: "workout buddy, keep accountable"
+                },
+                {
+                    id: 8,
+                    english: "Ultimately, listening to your body's signals is the best way to achieve lifelong health.",
+                    korean: "궁극적으로 자신의 몸이 보내는 신호에 귀 기울이는 것이 평생 건강을 달성하는 최고의 비결입니다.",
+                    targetKeyword: "lifelong health, listen to signals"
+                }
+            ],
             vocabList: [
                 {
                     id: 1,
@@ -627,7 +883,7 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
             }
 
             let history = JSON.parse(localStorage.getItem('ebs_study_history') || '{}');
-            if (Object.keys(history).length === 0) {
+            if (Object.keys(history).length === 0 || !history[selectedDate] || !history[selectedDate].passageSentences) {
                 saveLessonToLocalStorage(selectedDate, SAMPLE_LESSON);
             }
 
@@ -732,13 +988,6 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
                 return;
             }
 
-            const apiKey = getApiKey();
-            if (!apiKey) {
-                speakEnglishClean(englishText);
-                showToast("Gemini API 키가 없어 표준 고음질 영어 음성으로 재생합니다.");
-                return;
-            }
-
             stopAllAudio();
             const btn = document.getElementById('speakPassageBtn');
             const statusBadge = document.getElementById('audioStatusBadge');
@@ -749,37 +998,17 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
                 statusBadge.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles text-amber-500 animate-pulse"></i> <strong>EBS AI 스튜디오 원어민 음성</strong>을 생성하고 있습니다...`;
             }
 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
-
-            const promptText = `Please read the following EBS English passage clearly, naturally, and fluently with a warm native American radio broadcasting accent (EBS Radio Host style):\n\n${englishText}`;
-
-            const payload = {
-                contents: [{
-                    parts: [{ text: promptText }]
-                }],
-                generationConfig: {
-                    responseModalities: ["AUDIO"],
-                    speechConfig: {
-                        voiceConfig: {
-                            prebuiltVoiceConfig: { voiceName: "Aoede" }
-                        }
-                    }
-                },
-                model: "gemini-2.5-flash-preview-tts"
-            };
-
             try {
-                const response = await fetch(apiUrl, {
+                const response = await fetch('/api/tts', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({ text: englishText, userApiKey: getApiKey() })
                 });
                 const result = await response.json();
-                const part = result?.candidates?.[0]?.content?.parts?.[0];
-                const audioData = part?.inlineData?.data;
-                const mimeType = part?.inlineData?.mimeType;
+                const audioData = result.audioData;
+                const mimeType = result.mimeType;
 
-                if (audioData && mimeType && mimeType.startsWith("audio/")) {
+                if (result.success && audioData && mimeType) {
                     const rateMatch = mimeType.match(/rate=(\d+)/);
                     const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
                     const arrayBuffer = base64ToArrayBuffer(audioData);
@@ -802,7 +1031,7 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
                     currentAudioElement.play();
                     if (btn) btn.innerHTML = `<i class="fa-solid fa-volume-high text-emerald-300"></i> AI 원어민 음성 재생 중`;
                 } else {
-                    throw new Error("No audio payload returned");
+                    throw new Error(result.error || "No audio payload returned");
                 }
             } catch (err) {
                 console.warn("Gemini Studio TTS fallback:", err);
@@ -900,6 +1129,7 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
 
             if (tabName === 'vocab') renderVocabList();
             else if (tabName === 'quiz') startNewQuizRound(true);
+            else if (tabName === 'writing') setupWritingQuiz();
             else if (tabName === 'practice') setupPracticeCards();
             else if (tabName === 'aiChat') initAiChatUI();
 
@@ -959,14 +1189,16 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
             reader.readAsDataURL(file);
         }
 
-        function loadSampleText() {
-            document.getElementById('manualTextInput').value = 
-`[EBS 입트영 - 건강 관리를 위한 규칙적인 운동과 생활 습관]
-Many people try to make it a rule to exercise regularly in order to stay in shape.
-However, continuous overwork and lack of adequate sleep can take a toll on physical health.
-To maintain wellness, it is essential to cut down on excessive sugar and caffeine intake, and stick to a routine every day.
-Incorporating cardiovascular activities and allowing your body to recharge its batteries will cultivate long-term consistency in your fitness journey.`;
-            showToast("10개 어휘가 포함된 샘플 본문 텍스트가 입력되었습니다.");
+        function loadSampleLessonDirectly() {
+            currentLessonData = JSON.parse(JSON.stringify(SAMPLE_LESSON));
+            currentLessonData.date = selectedDate;
+            writingList = [];
+            writingReviewCache = {};
+            reviewedWritingItems.clear();
+            saveLessonToLocalStorage(selectedDate, currentLessonData);
+            showExtractedTextSection();
+            showToast("EBS 입트영 샘플 교재(10개 단어/표현 및 본문 전체 문장)가 로드되었습니다!");
+            switchTab('vocab');
         }
 
         async function callGeminiApiWithRetry(apiUrl, payload, retries = 3, delay = 1000) {
@@ -1022,97 +1254,31 @@ Incorporating cardiovascular activities and allowing your body to recharge its b
         }
 
         async function analyzePassageWithGemini() {
-            const apiKey = getApiKey();
-            if (!apiKey) {
-                openApiKeyModal();
-                showToast("Gemini API 키를 먼저 입력해 주세요.");
-                return;
-            }
-
-            const textContent = document.getElementById('manualTextInput').value.trim();
-            if (!activeImageBase64 && !textContent) {
-                showToast("본문 사진을 촬영해 올리시거나 텍스트를 입력해 주세요!");
+            if (!activeImageBase64) {
+                showToast("먼저 스마트폰 카메라로 교재를 촬영하거나 갤러리에서 사진을 선택해 주세요!");
                 return;
             }
 
             document.getElementById('loadingState').classList.remove('hidden');
             document.getElementById('analyzeBtn').disabled = true;
 
-            // Updated to official model: gemini-3-flash-preview
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
-
-            const systemInstruction = `
-You are a high-precision OCR and language learning extraction engine for EBS '입이 트이는 영어' (입트영).
-
-CRITICAL INSTRUCTIONS FOR OCR & EXTRACTION:
-1. STRICT OCR: Carefully read, transcribe, and extract the ACTUAL text written inside the user's provided image or text notes. DO NOT generate random or fictional textbook passages.
-2. Formulate "extractedText" containing:
-   - The exact transcribed original text from the photo.
-   - A natural Korean translation (if the original is English) OR natural EBS English translation (if original is Korean) OR parallel bilingual presentation (if mixed).
-3. Formulate "pureEnglishText": ONLY the pure English passage sentences (without Korean translations, headers, or brackets), formatted perfectly for natural native American audio reading.
-4. Formulate "passageSummary": A concise 1-sentence summary in Korean describing the specific topic of the extracted passage.
-5. Formulate "vocabList": Extract EXACTLY 10 key items (a balanced mix of type: "word" and type: "expression", EXACTLY 10 ITEMS IN TOTAL) THAT DIRECTLY APPEAR IN OR ARE DERIVED FROM THE EXTRACTED PASSAGE.
-6. Provide high-quality Korean translations, phonetic guides, and realistic example sentences for each of the 10 items.
-`;
-
-            let userParts = [];
-            
-            if (activeImageBase64) {
-                const base64Data = activeImageBase64.split(',')[1] || activeImageBase64;
-                const mimeType = activeImageBase64.split(';')[0].split(':')[1] || 'image/jpeg';
-                userParts.push({
-                    inlineData: {
-                        mimeType: mimeType,
-                        data: base64Data
-                    }
-                });
-            }
-
-            if (textContent) {
-                userParts.push({ text: `Analyze the provided text notes/passage:\n${textContent}\n\nPerform accurate transcription, create pure English audio text, and extract EXACTLY 10 key English words and expressions.` });
-            } else {
-                userParts.push({ text: "Carefully analyze the attached image. Extract all text visible in the photo via OCR, provide pure English audio reading text, and extract EXACTLY 10 key English words and expressions from this specific page." });
-            }
-
-            const payload = {
-                contents: [{ role: "user", parts: userParts }],
-                systemInstruction: { parts: [{ text: systemInstruction }] },
-                generationConfig: {
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: "OBJECT",
-                        properties: {
-                            extractedText: { type: "STRING" },
-                            pureEnglishText: { type: "STRING" },
-                            passageSummary: { type: "STRING" },
-                            vocabList: {
-                                type: "ARRAY",
-                                items: {
-                                    type: "OBJECT",
-                                    properties: {
-                                        id: { type: "INTEGER" },
-                                        type: { type: "STRING" },
-                                        english: { type: "STRING" },
-                                        korean: { type: "STRING" },
-                                        phonetic: { type: "STRING" },
-                                        exampleEn: { type: "STRING" },
-                                        exampleKo: { type: "STRING" }
-                                    },
-                                    required: ["id", "type", "english", "korean", "phonetic", "exampleEn", "exampleKo"]
-                                }
-                            }
-                        },
-                        required: ["extractedText", "passageSummary", "vocabList"]
-                    }
-                }
-            };
-
             try {
-                const result = await callGeminiApiWithRetry(apiUrl, payload);
-                const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (!jsonText) throw new Error("AI 응답 데이터가 비어 있습니다.");
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        imageBase64: activeImageBase64,
+                        text: '',
+                        userApiKey: getApiKey()
+                    })
+                });
 
-                const parsedData = JSON.parse(jsonText);
+                const result = await response.json();
+                if (!response.ok || !result.success || !result.data) {
+                    throw new Error(result.error || "올바른 OCR 결과를 추출하지 못했습니다.");
+                }
+
+                const parsedData = result.data;
                 if (!parsedData.extractedText || !parsedData.vocabList || parsedData.vocabList.length === 0) {
                     throw new Error("올바른 OCR 결과를 추출하지 못했습니다.");
                 }
@@ -1122,8 +1288,14 @@ CRITICAL INSTRUCTIONS FOR OCR & EXTRACTION:
                     extractedText: parsedData.extractedText,
                     pureEnglishText: parsedData.pureEnglishText || extractCleanEnglishText(parsedData.extractedText),
                     passageSummary: parsedData.passageSummary,
+                    passageSentences: parsedData.passageSentences || extractSentencesFromPassage(parsedData),
                     vocabList: parsedData.vocabList
                 };
+
+                // Reset quiz and writing caches for newly loaded lesson
+                writingList = [];
+                writingReviewCache = {};
+                reviewedWritingItems.clear();
 
                 saveLessonToLocalStorage(selectedDate, currentLessonData);
                 showExtractedTextSection();
@@ -1202,13 +1374,6 @@ CRITICAL INSTRUCTIONS FOR OCR & EXTRACTION:
         }
 
         async function fetchNuanceExplanation(idx) {
-            const apiKey = getApiKey();
-            if (!apiKey) {
-                openApiKeyModal();
-                showToast("API 키 설정이 필요합니다.");
-                return;
-            }
-
             const item = currentLessonData.vocabList[idx];
             const targetBox = document.getElementById(`nuanceBox-${idx}`);
             
@@ -1218,38 +1383,29 @@ CRITICAL INSTRUCTIONS FOR OCR & EXTRACTION:
             }
 
             targetBox.classList.remove('hidden');
-            targetBox.innerHTML = `<div class="flex items-center gap-2 text-purple-700 font-bold"><i class="fa-solid fa-spinner animate-spin"></i> Gemini 3 Flash 뉘앙스 분석 중...</div>`;
-
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
-
-            const prompt = `Act as an EBS English teacher. Explain "${item.english}" (${item.korean}) for Korean learners.
-Return concise HTML (clean tags, bullet points):
-1. 원어민 뉘앙스 차이 (Native Nuance)
-2. 콩글리시 피하기 팁 (Konglish Caution)
-3. 세련된 대체 표현 2개`;
+            targetBox.innerHTML = `<div class="flex items-center gap-2 text-purple-700 font-bold"><i class="fa-solid fa-spinner animate-spin"></i> Gemini AI 뉘앙스 분석 중...</div>`;
 
             try {
-                const res = await fetch(apiUrl, {
+                const res = await fetch('/api/nuance', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    body: JSON.stringify({
+                        english: item.english,
+                        korean: item.korean,
+                        userApiKey: getApiKey()
+                    })
                 });
                 const data = await res.json();
-                const text = data.candidates?.[0]?.content?.parts?.map(p => p.text).filter(Boolean).join('') || "분석을 가져올 수 없습니다.";
-                targetBox.innerHTML = `<div class="font-extrabold text-purple-900 mb-1 border-b border-purple-200 pb-1"><i class="fa-solid fa-lightbulb"></i> Gemini AI 뉘앙스 레슨</div>${text}`;
+                if (!res.ok || !data.success) {
+                    throw new Error(data.error || "분석을 가져올 수 없습니다.");
+                }
+                targetBox.innerHTML = `<div class="font-extrabold text-purple-900 mb-1 border-b border-purple-200 pb-1"><i class="fa-solid fa-lightbulb"></i> Gemini AI 뉘앙스 레슨</div>${data.html}`;
             } catch(e) {
-                targetBox.innerHTML = `<p class="text-rose-600">오류가 발생했습니다. API 키를 확인해 주세요.</p>`;
+                targetBox.innerHTML = `<p class="text-rose-600">오류가 발생했습니다: ${e.message}</p>`;
             }
         }
 
         async function fetchGroundedNewsExample(idx) {
-            const apiKey = getApiKey();
-            if (!apiKey) {
-                openApiKeyModal();
-                showToast("API 키 설정이 필요합니다.");
-                return;
-            }
-
             const item = currentLessonData.vocabList[idx];
             const targetBox = document.getElementById(`groundedBox-${idx}`);
 
@@ -1261,57 +1417,27 @@ Return concise HTML (clean tags, bullet points):
             targetBox.classList.remove('hidden');
             targetBox.innerHTML = `<div class="flex items-center gap-2 text-emerald-700 font-bold"><i class="fa-solid fa-spinner animate-spin text-emerald-600"></i> 실시간 글로벌 뉴스 및 미디어 트렌드 분석 중...</div>`;
 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
-
-            const prompt = `You are a real-time global English media corpus curator for EBS English learners.
-Target vocabulary/expression: "${item.english}" (Korean meaning: "${item.korean}").
-
-Provide TWO distinct, highly realistic and authentic recent headlines/sentences as used in major global media (such as BBC, The New York Times, CNN, Forbes, TechCrunch, or Wall Street Journal).
-
-Format your response in clean, attractive HTML:
-<div class="space-y-2">
-  <div class="bg-white p-2.5 rounded-lg border border-emerald-200">
-    <div class="flex items-center gap-1.5 font-bold text-emerald-900 text-[11px] mb-1">
-      <span class="bg-emerald-600 text-white px-1.5 py-0.5 rounded text-[10px]">BBC / NYT Style 1</span>
-      <span>[Headline / Media Context]</span>
-    </div>
-    <p class="text-slate-800 font-medium text-xs">"[Actual English Sentence containing '${item.english}']"</p>
-    <p class="text-slate-500 text-[11px] mt-0.5">(자연스러운 한글 해석)</p>
-  </div>
-  <div class="bg-white p-2.5 rounded-lg border border-emerald-200">
-    <div class="flex items-center gap-1.5 font-bold text-emerald-900 text-[11px] mb-1">
-      <span class="bg-emerald-600 text-white px-1.5 py-0.5 rounded text-[10px]">Global Media Trend 2</span>
-      <span>[Business / Life Context]</span>
-    </div>
-    <p class="text-slate-800 font-medium text-xs">"[Second English Sentence containing '${item.english}']"</p>
-    <p class="text-slate-500 text-[11px] mt-0.5">(자연스러운 한글 해석)</p>
-  </div>
-</div>`;
-
             try {
-                const res = await fetch(apiUrl, {
+                const res = await fetch('/api/grounded-news', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }]
+                        english: item.english,
+                        korean: item.korean,
+                        userApiKey: getApiKey()
                     })
                 });
                 const data = await res.json();
-                const parts = data.candidates?.[0]?.content?.parts;
-                let generatedHtml = parts?.map(p => p.text).filter(Boolean).join('') || '';
-
-                if (generatedHtml) {
-                    generatedHtml = generatedHtml.replace(/```html/gi, '').replace(/```/g, '').trim();
-                    targetBox.innerHTML = `
-                        <div class="font-extrabold text-emerald-900 mb-1 border-b border-emerald-200 pb-1 flex items-center justify-between">
-                            <span class="flex items-center gap-1.5"><i class="fa-solid fa-globe text-emerald-600"></i> 글로벌 미디어 실시간 쓰임새</span>
-                            <span class="text-[10px] text-emerald-700 font-normal">BBC, NYT, Forbes 스타일</span>
-                        </div>
-                        ${generatedHtml}
-                    `;
-                } else {
-                    throw new Error("No text candidate returned");
+                if (!res.ok || !data.success) {
+                    throw new Error(data.error || "예시를 가져올 수 없습니다.");
                 }
+                targetBox.innerHTML = `
+                    <div class="font-extrabold text-emerald-900 mb-1 border-b border-emerald-200 pb-1 flex items-center justify-between">
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-globe text-emerald-600"></i> 글로벌 미디어 실시간 쓰임새</span>
+                        <span class="text-[10px] text-emerald-700 font-normal">BBC, NYT, Forbes 스타일</span>
+                    </div>
+                    ${data.html}
+                `;
             } catch(e) {
                 console.error("Trend search error:", e);
                 targetBox.innerHTML = `
@@ -1491,12 +1617,483 @@ Format your response in clean, attractive HTML:
                         <button onclick="startNewQuizRound(false)" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-5 py-3 rounded-xl transition shadow flex items-center gap-1.5 active:scale-95">
                             <i class="fa-solid fa-play"></i> 다음 5개 퀴즈 계속 풀기 (무한 퀴즈)
                         </button>
+                        <button onclick="switchTab('writing')" class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold px-4 py-3 rounded-xl transition shadow flex items-center gap-1.5 active:scale-95">
+                            <i class="fa-solid fa-pen-nib text-amber-300"></i> AI 주관식 영작퀴즈 풀기
+                        </button>
                         <button onclick="switchTab('practice')" class="bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold px-4 py-3 rounded-xl transition active:scale-95">
                             <i class="fa-solid fa-repeat"></i> 플래시카드 복습 (10개)
                         </button>
                     </div>
                 </div>
             `;
+        }
+
+        // ==========================================
+        // WRITING QUIZ (주관식 영작퀴즈 & AI 실시간 검토)
+        // ==========================================
+
+        function extractSentencesFromPassage(lesson) {
+            if (lesson && Array.isArray(lesson.passageSentences) && lesson.passageSentences.length > 0) {
+                return lesson.passageSentences;
+            }
+
+            // Fallback: parse pureEnglishText or extractedText into sentences
+            const rawEng = lesson?.pureEnglishText || lesson?.extractedText || "";
+            const cleanText = rawEng.replace(/\[EBS.*?\]/gi, '').split(/\(한글 해석\)/i)[0].trim();
+            const sentenceMatches = cleanText.match(/[^.!?]+[.!?]+["']?/g) || [];
+            
+            if (sentenceMatches.length === 0 && cleanText) {
+                sentenceMatches.push(cleanText);
+            }
+
+            // Also check if Korean translation is in extractedText
+            let koreanSentences = [];
+            if (lesson?.extractedText && lesson.extractedText.includes('(한글 해석)')) {
+                const koPart = lesson.extractedText.split('(한글 해석)')[1] || '';
+                const koMatches = koPart.match(/[^.!?]+[.!?]+/g) || [];
+                koreanSentences = koMatches.map(s => s.trim()).filter(s => s.length > 0);
+            }
+
+            const vocab = lesson?.vocabList || [];
+
+            const result = sentenceMatches.map((s, idx) => {
+                const trimmedEng = s.trim();
+                const matchedKo = koreanSentences[idx] || (idx < vocab.length ? vocab[idx].exampleKo : `본문 ${idx + 1}번째 문장을 영어로 영작하세요.`);
+                // Find any matching vocab keyword
+                const matchedVocab = vocab.find(v => v.english && trimmedEng.toLowerCase().includes(v.english.toLowerCase()));
+                const targetKeyword = matchedVocab ? matchedVocab.english : "";
+
+                return {
+                    id: idx + 1,
+                    english: trimmedEng,
+                    korean: matchedKo,
+                    targetKeyword: targetKeyword
+                };
+            }).filter(item => item.english.length > 5);
+
+            if (lesson && result.length > 0) {
+                lesson.passageSentences = result;
+            }
+
+            return result;
+        }
+
+        function setupWritingQuiz(forceReset = false, mode = null) {
+            if (!currentLessonData) {
+                showToast("먼저 교재 본문을 로드하거나 사진을 촬영해 주세요!");
+                return;
+            }
+
+            if (mode) {
+                writingMode = mode;
+                forceReset = true;
+            }
+
+            const allPassageSentences = extractSentencesFromPassage(currentLessonData);
+
+            if (forceReset || writingList.length === 0) {
+                if (writingMode === 'passage' && allPassageSentences.length > 0) {
+                    writingList = allPassageSentences.map((item, idx) => ({
+                        id: item.id || (idx + 1),
+                        mode: 'passage',
+                        orderIndex: idx + 1,
+                        targetKeyword: item.targetKeyword || '본문 전체 문장 영작',
+                        koreanSentence: item.korean || `본문 문장 #${idx + 1}`,
+                        referenceEnglish: item.english,
+                        meaning: item.targetKeyword ? `포인트: ${item.targetKeyword}` : '본문 전체 문장',
+                        phonetic: ''
+                    }));
+                } else {
+                    // Vocab mode (10 key vocabulary examples)
+                    writingMode = 'vocab';
+                    const list = currentLessonData.vocabList || [];
+                    writingList = list.map((item, idx) => ({
+                        id: item.id || (idx + 1),
+                        mode: 'vocab',
+                        orderIndex: idx + 1,
+                        targetKeyword: item.english,
+                        koreanSentence: item.exampleKo || item.korean,
+                        referenceEnglish: item.exampleEn || item.english,
+                        meaning: item.korean,
+                        phonetic: item.phonetic || ''
+                    }));
+                }
+
+                writingIndex = 0;
+                reviewedWritingItems.clear();
+                writingReviewCache = {};
+            }
+
+            updateWritingModeUI(allPassageSentences.length);
+            renderWritingSentencePills();
+            renderWritingQuestion();
+        }
+
+        function updateWritingModeUI(passageCount) {
+            const passageBtn = document.getElementById('modePassageBtn');
+            const vocabBtn = document.getElementById('modeVocabBtn');
+            const badge = document.getElementById('passageCountBadge');
+
+            const count = passageCount || (currentLessonData?.passageSentences?.length || 0);
+            if (badge) {
+                badge.innerText = count > 0 ? `전체 ${count}문장` : '전체 문장';
+            }
+
+            if (writingMode === 'passage') {
+                if (passageBtn) {
+                    passageBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-black transition shadow-sm bg-indigo-600 text-white flex items-center gap-1.5 whitespace-nowrap active:scale-95';
+                }
+                if (vocabBtn) {
+                    vocabBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 hover:text-indigo-600 bg-transparent flex items-center gap-1.5 whitespace-nowrap active:scale-95';
+                }
+            } else {
+                if (passageBtn) {
+                    passageBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 hover:text-indigo-600 bg-transparent flex items-center gap-1.5 whitespace-nowrap active:scale-95';
+                }
+                if (vocabBtn) {
+                    vocabBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-black transition shadow-sm bg-indigo-600 text-white flex items-center gap-1.5 whitespace-nowrap active:scale-95';
+                }
+            }
+        }
+
+        function renderWritingSentencePills() {
+            const container = document.getElementById('writingSentencePills');
+            if (!container || writingList.length === 0) return;
+
+            container.innerHTML = writingList.map((item, idx) => {
+                const isActive = idx === writingIndex;
+                const isReviewed = reviewedWritingItems.has(item.id);
+                let btnClass = "";
+                let iconHtml = "";
+
+                if (isActive) {
+                    btnClass = "bg-indigo-600 text-white shadow-md ring-2 ring-indigo-300 font-black";
+                } else if (isReviewed) {
+                    btnClass = "bg-emerald-100 text-emerald-900 border border-emerald-300 hover:bg-emerald-200 font-bold";
+                    iconHtml = '<i class="fa-solid fa-check text-emerald-600 text-[10px] ml-1"></i>';
+                } else {
+                    btnClass = "bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200 font-medium";
+                }
+
+                return `<button onclick="jumpToWritingSentence(${idx})" class="px-2.5 py-1 rounded-lg text-xs transition flex items-center gap-0.5 whitespace-nowrap active:scale-95 ${btnClass}">
+                    <span>${idx + 1}번</span>${iconHtml}
+                </button>`;
+            }).join('');
+        }
+
+        function jumpToWritingSentence(idx) {
+            if (idx >= 0 && idx < writingList.length) {
+                writingIndex = idx;
+                renderWritingQuestion();
+            }
+        }
+
+        function shuffleWritingSentences() {
+            if (writingList.length === 0) return;
+            writingList.sort(() => Math.random() - 0.5);
+            writingIndex = 0;
+            renderWritingSentencePills();
+            renderWritingQuestion();
+            showToast("영작 문장 순서를 무작위로 섞었습니다!");
+        }
+
+        function resetWritingSession() {
+            setupWritingQuiz(true);
+            showToast("주관식 영작 세션을 처음부터 다시 시작합니다.");
+        }
+
+        function updateWritingCharCount() {
+            const input = document.getElementById('writingUserInput');
+            const countSpan = document.getElementById('writingCharCount');
+            if (input && countSpan) {
+                const len = input.value.trim().length;
+                countSpan.innerText = `${len} 자 입력됨`;
+            }
+        }
+
+        function toggleWritingHint() {
+            const item = writingList[writingIndex];
+            if (!item) return;
+            const hintBox = document.getElementById('writingHintBox');
+            const toggleBtn = document.getElementById('toggleHintBtn');
+            isWritingHintShown = !isWritingHintShown;
+
+            if (isWritingHintShown) {
+                hintBox.classList.remove('hidden');
+                const firstWord = item.referenceEnglish.split(' ')[0] || '';
+                const wordCount = item.referenceEnglish.split(' ').length;
+                const keywordHtml = item.targetKeyword ? `<div><strong>💡 핵심 활용 표현:</strong> <span class="text-indigo-800 font-bold underline">${item.targetKeyword}</span></div>` : '';
+                document.getElementById('writingHintText').innerHTML = `
+                    ${keywordHtml}
+                    <div class="mt-1"><strong>🔍 시작 단어 힌트:</strong> "${firstWord}..." (총 약 ${wordCount}개 단어로 구성)</div>
+                `;
+                toggleBtn.innerHTML = `<i class="fa-solid fa-lightbulb text-amber-500"></i> <span>영작 힌트 접기</span>`;
+            } else {
+                hintBox.classList.add('hidden');
+                toggleBtn.innerHTML = `<i class="fa-regular fa-lightbulb text-amber-500"></i> <span>영작 힌트 보기</span>`;
+            }
+        }
+
+        function showWritingDirectModelAnswer() {
+            const item = writingList[writingIndex];
+            if (!item) return;
+
+            const resultCard = document.getElementById('writingReviewResultCard');
+            const scoreBanner = document.getElementById('writingScoreBanner');
+            const scoreBadge = document.getElementById('writingScoreBadge');
+            const scoreVal = document.getElementById('writingScoreValue');
+            const evalTitle = document.getElementById('writingEvalTitle');
+            const evalSummary = document.getElementById('writingEvalSummary');
+
+            scoreBanner.className = 'p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-indigo-50 border border-indigo-200';
+            scoreBadge.className = 'w-14 h-14 rounded-2xl flex flex-col items-center justify-center font-black shadow text-white bg-indigo-600';
+            scoreVal.innerText = '100';
+            evalTitle.innerText = 'EBS 모범 영작문 확인 📖';
+            evalSummary.innerText = '표준 영어 문장과 표현 포인트를 확인하세요.';
+
+            const userText = document.getElementById('writingUserInput').value.trim() || "(직접 입력 없이 모범 답안을 확인했습니다)";
+            document.getElementById('reviewUserSentence').innerText = userText;
+            document.getElementById('reviewCorrectedSentence').innerText = item.referenceEnglish;
+            document.getElementById('reviewReferenceSentence').innerText = item.referenceEnglish;
+
+            const targetPoint = item.targetKeyword ? `핵심 포인트: <strong>${item.targetKeyword}</strong>` : `본문 문장 영작`;
+            document.getElementById('writingKeyPointsBox').innerHTML = `
+                <p class="font-bold text-indigo-900"><i class="fa-solid fa-check text-indigo-600"></i> ${targetPoint}</p>
+            `;
+
+            document.getElementById('reviewFeedbackContent').innerText = `EBS 입트영 교재의 표준 모범 문장입니다. 어순과 전치사, 시제에 유의하여 큰 소리로 3번 읽어보세요!`;
+
+            document.getElementById('writingAlternativesBox').classList.add('hidden');
+
+            reviewedWritingItems.add(item.id);
+            document.getElementById('reviewedWritingCount').innerText = `${reviewedWritingItems.size}개 / ${writingList.length}개`;
+            renderWritingSentencePills();
+
+            resultCard.classList.remove('hidden');
+            resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function renderWritingQuestion() {
+            if (writingList.length === 0) return;
+            const item = writingList[writingIndex];
+            if (!item) return;
+
+            // Badges & Progress
+            document.getElementById('currentWritingNumber').innerText = writingIndex + 1;
+            document.getElementById('totalWritingCount').innerText = writingList.length;
+            const pct = Math.round(((writingIndex + 1) / writingList.length) * 100);
+            document.getElementById('writingProgressBar').style.width = `${pct}%`;
+            document.getElementById('reviewedWritingCount').innerText = `${reviewedWritingItems.size}개 / ${writingList.length}개`;
+
+            // Sentence Order Tag & Korean prompt
+            const orderLabel = document.getElementById('sentenceOrderLabel');
+            if (orderLabel) {
+                if (writingMode === 'passage') {
+                    orderLabel.innerText = `본문 ${writingIndex + 1}번째 문장 (전체 ${writingList.length}문장)`;
+                } else {
+                    orderLabel.innerText = `핵심 어휘 ${writingIndex + 1}번 예문 (전체 10개)`;
+                }
+            }
+
+            document.getElementById('writingKoreanPrompt').innerText = `"${item.koreanSentence}"`;
+            document.getElementById('writingTargetKeyword').innerText = `${item.targetKeyword || (writingMode === 'passage' ? '본문 전체 문장 영작' : '핵심 표현')}`;
+
+            // Reset hint box
+            isWritingHintShown = false;
+            document.getElementById('writingHintBox').classList.add('hidden');
+            document.getElementById('toggleHintBtn').innerHTML = `<i class="fa-regular fa-lightbulb text-amber-500"></i> <span>영작 힌트 보기</span>`;
+
+            // Textarea handling
+            const userInput = document.getElementById('writingUserInput');
+            userInput.value = '';
+            updateWritingCharCount();
+
+            // Render updated quick jump pills
+            renderWritingSentencePills();
+
+            // Check if reviewed before
+            const cachedReview = writingReviewCache[item.id];
+            const resultCard = document.getElementById('writingReviewResultCard');
+            const loadingCard = document.getElementById('writingReviewLoading');
+            loadingCard.classList.add('hidden');
+
+            if (cachedReview) {
+                userInput.value = cachedReview.userSentence || '';
+                updateWritingCharCount();
+                renderWritingReviewResult(cachedReview, item);
+            } else {
+                resultCard.classList.add('hidden');
+            }
+        }
+
+        function prevWritingItem() {
+            if (writingIndex > 0) {
+                writingIndex--;
+                renderWritingQuestion();
+            } else {
+                showToast("첫 번째 영작 문장입니다.");
+            }
+        }
+
+        function nextWritingItem() {
+            if (writingIndex < writingList.length - 1) {
+                writingIndex++;
+                renderWritingQuestion();
+            } else {
+                showToast("마지막 문장입니다! 전체 문장을 복습하거나 순서를 섞어보세요.");
+            }
+        }
+
+        async function submitWritingAnswer() {
+            const item = writingList[writingIndex];
+            if (!item) return;
+
+            const userInput = document.getElementById('writingUserInput').value.trim();
+            if (!userInput) {
+                showToast("영작한 문장을 먼저 입력창에 작성해 주세요!");
+                document.getElementById('writingUserInput').focus();
+                return;
+            }
+
+            if (isWritingReviewing) return;
+
+            isWritingReviewing = true;
+            const submitBtn = document.getElementById('submitWritingBtn');
+            const loadingCard = document.getElementById('writingReviewLoading');
+            const resultCard = document.getElementById('writingReviewResultCard');
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> AI 첨삭 검토 중...`;
+            loadingCard.classList.remove('hidden');
+            resultCard.classList.add('hidden');
+
+            try {
+                const response = await fetch('/api/writing-review', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        koreanSentence: item.koreanSentence,
+                        userEnglish: userInput,
+                        targetExpression: item.targetKeyword,
+                        referenceEnglish: item.referenceEnglish,
+                        userApiKey: getApiKey()
+                    })
+                });
+
+                const data = await response.json();
+                if (!response.ok || !data.success || !data.review) {
+                    throw new Error(data.error || "AI 영작 첨삭 결과를 불러오지 못했습니다.");
+                }
+
+                const review = data.review;
+                review.userSentence = userInput;
+                writingReviewCache[item.id] = review;
+                reviewedWritingItems.add(item.id);
+
+                renderWritingReviewResult(review, item);
+                document.getElementById('reviewedWritingCount').innerText = `${reviewedWritingItems.size}개 / ${writingList.length}개`;
+                renderWritingSentencePills();
+
+                showToast(`AI 첨삭 완료! 채점 점수: ${review.score}점`);
+
+            } catch (err) {
+                console.error("Writing Review Error:", err);
+                showToast(`첨삭 실패: ${err.message || '다시 시도해 주세요.'}`);
+            } finally {
+                isWritingReviewing = false;
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i> <span>AI 영작 첨삭 & 검토받기</span>`;
+                loadingCard.classList.add('hidden');
+            }
+        }
+
+        function renderWritingReviewResult(review, item) {
+            const resultCard = document.getElementById('writingReviewResultCard');
+            const scoreBanner = document.getElementById('writingScoreBanner');
+            const scoreBadge = document.getElementById('writingScoreBadge');
+            const scoreVal = document.getElementById('writingScoreValue');
+            const evalTitle = document.getElementById('writingEvalTitle');
+            const evalSummary = document.getElementById('writingEvalSummary');
+
+            const score = Number(review.score) || 0;
+            scoreVal.innerText = score;
+
+            if (score >= 90) {
+                scoreBanner.className = 'p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-emerald-50 border border-emerald-200';
+                scoreBadge.className = 'w-14 h-14 rounded-2xl flex flex-col items-center justify-center font-black shadow text-white bg-emerald-600';
+                evalTitle.innerText = '원어민 수준의 훌륭한 영작! 🎉';
+            } else if (score >= 75) {
+                scoreBanner.className = 'p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-indigo-50 border border-indigo-200';
+                scoreBadge.className = 'w-14 h-14 rounded-2xl flex flex-col items-center justify-center font-black shadow text-white bg-indigo-600';
+                evalTitle.innerText = '자연스럽고 좋은 영작입니다! 👏';
+            } else if (score >= 60) {
+                scoreBanner.className = 'p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-amber-50 border border-amber-200';
+                scoreBadge.className = 'w-14 h-14 rounded-2xl flex flex-col items-center justify-center font-black shadow text-white bg-amber-600';
+                evalTitle.innerText = '의미 전달이 통합니다. 디테일을 조금만 다듬어보세요 💡';
+            } else {
+                scoreBanner.className = 'p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-rose-50 border border-rose-200';
+                scoreBadge.className = 'w-14 h-14 rounded-2xl flex flex-col items-center justify-center font-black shadow text-white bg-rose-600';
+                evalTitle.innerText = '아래 피드백과 모범 답안을 확인하고 다시 도전해 보세요 💪';
+            }
+
+            evalSummary.innerText = review.evaluation || 'AI 첨삭 결과를 확인해 보세요.';
+
+            document.getElementById('reviewUserSentence').innerText = review.userSentence || document.getElementById('writingUserInput').value;
+            document.getElementById('reviewCorrectedSentence').innerText = review.correctedEnglish || item.referenceEnglish;
+            document.getElementById('reviewReferenceSentence').innerText = item.referenceEnglish;
+
+            // Key points
+            const keyPointsBox = document.getElementById('writingKeyPointsBox');
+            if (review.keyPoints && review.keyPoints.length > 0) {
+                keyPointsBox.innerHTML = review.keyPoints.map(kp => `
+                    <div class="flex items-start gap-1.5 text-xs text-indigo-950 font-medium">
+                        <i class="fa-solid fa-circle-check text-indigo-600 mt-0.5 text-[10px]"></i>
+                        <span>${kp}</span>
+                    </div>
+                `).join('');
+            } else {
+                const targetPoint = item.targetKeyword ? `핵심 포인트: <strong>${item.targetKeyword}</strong>` : `본문 문장 영작`;
+                keyPointsBox.innerHTML = `
+                    <p class="font-bold text-indigo-900"><i class="fa-solid fa-check text-indigo-600"></i> ${targetPoint}</p>
+                `;
+            }
+
+            // Feedback commentary
+            document.getElementById('reviewFeedbackContent').innerText = review.feedback || '문법과 뉘앙스가 훌륭합니다.';
+
+            // Native variations / alternatives
+            const altBox = document.getElementById('writingAlternativesBox');
+            const altList = document.getElementById('writingAlternativesList');
+            if (review.nativeAlternatives && review.nativeAlternatives.length > 0) {
+                altBox.classList.remove('hidden');
+                altList.innerHTML = review.nativeAlternatives.map(alt => `
+                    <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                        <p class="text-xs sm:text-sm font-bold text-slate-900 font-sans flex items-center justify-between">
+                            <span>"${alt.english}"</span>
+                            <button onclick="speakEnglishClean('${alt.english.replace(/'/g, "\\'")}')" class="text-indigo-600 hover:text-indigo-800 text-xs px-2 py-0.5 rounded bg-indigo-50 border border-indigo-100 flex items-center gap-1">
+                                <i class="fa-solid fa-volume-high text-[10px]"></i> 듣기
+                            </button>
+                        </p>
+                        <p class="text-[11px] text-slate-500 mt-0.5">${alt.koreanNuance || alt.explanation || ''}</p>
+                    </div>
+                `).join('');
+            } else {
+                altBox.classList.add('hidden');
+            }
+
+            if (reviewedWritingItems.size === writingList.length && writingList.length > 0) {
+                showToast(`🎉 축하합니다! 전체 ${writingList.length}개 문장 영작 첨삭을 모두 완료하셨습니다!`);
+            }
+
+            resultCard.classList.remove('hidden');
+            resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function playModelSentenceAudio() {
+            const item = writingList[writingIndex];
+            if (item && item.referenceEnglish) {
+                speakEnglishClean(item.referenceEnglish);
+            }
         }
 
         function setupPracticeCards() {
@@ -1596,13 +2193,6 @@ Format your response in clean, attractive HTML:
         }
 
         async function sendChatMessageToGemini() {
-            const apiKey = getApiKey();
-            if (!apiKey) {
-                openApiKeyModal();
-                showToast("API 키 설정이 필요합니다.");
-                return;
-            }
-
             const input = document.getElementById('userChatInput');
             const text = input.value.trim();
             if (!text) return;
@@ -1615,29 +2205,25 @@ Format your response in clean, attractive HTML:
 
             const targetWords = currentLessonData?.vocabList?.map(v => v.english).join(', ') || '';
 
-            const systemPrompt = `You are an encouraging native English tutor for Korean EBS learners.
-Practice target items: [${targetWords}].
-Rules:
-1. Respond naturally in friendly English (1-3 sentences).
-2. Check student's response for grammar. If needed, provide brief feedback at end as: [FEEDBACK]: (explanation).`;
-
             aiChatHistory.push({ role: 'user', parts: [{ text: text }] });
 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
-
             try {
-                const res = await fetch(apiUrl, {
+                const res = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        contents: aiChatHistory,
-                        systemInstruction: { parts: [{ text: systemPrompt }] }
+                        messages: aiChatHistory,
+                        targetWords: targetWords,
+                        userApiKey: getApiKey()
                     })
                 });
 
                 const data = await res.json();
-                const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't process that.";
+                if (!res.ok || !data.success) {
+                    throw new Error(data.error || "대화 연결에 오류가 발생했습니다.");
+                }
 
+                const responseText = data.text || "Sorry, I couldn't process that.";
                 let mainReply = responseText;
                 let feedback = '';
 
@@ -1651,7 +2237,7 @@ Rules:
                 appendChatMessage('bot', mainReply, feedback);
 
             } catch(e) {
-                appendChatMessage('bot', "대화 연결에 오류가 발생했습니다.");
+                appendChatMessage('bot', `대화 연결에 오류가 발생했습니다: ${e.message}`);
             } finally {
                 sendBtn.disabled = false;
             }
@@ -1674,22 +2260,27 @@ Rules:
             let history = JSON.parse(localStorage.getItem('ebs_study_history') || '{}');
             if (history[dateKey]) {
                 currentLessonData = history[dateKey];
-                showToast(`${dateKey} 저장된 10개 학습 기록을 불러왔습니다.`);
+                if (!currentLessonData.passageSentences || currentLessonData.passageSentences.length === 0) {
+                    currentLessonData.passageSentences = extractSentencesFromPassage(currentLessonData);
+                }
+                showToast(`${dateKey} 저장된 교재 학습 기록을 불러왔습니다.`);
             } else {
                 currentLessonData = {
                     date: dateKey,
                     extractedText: "",
                     pureEnglishText: "",
                     passageSummary: "",
+                    passageSentences: [],
                     vocabList: []
                 };
-                showToast(`${dateKey} 학습 기록이 없습니다. 본문 사진이나 텍스트를 입력해 주세요.`);
+                showToast(`${dateKey} 학습 기록이 없습니다. 스마트폰으로 교재를 촬영해 주세요.`);
             }
 
             updateDateStatusBadge();
 
             if (currentTab === 'vocab') renderVocabList();
             if (currentTab === 'quiz') startNewQuizRound(true);
+            if (currentTab === 'writing') setupWritingQuiz(true);
             if (currentTab === 'practice') setupPracticeCards();
         }
 
