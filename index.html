@@ -177,11 +177,17 @@
                         <button onclick="document.getElementById('imageInput').click()" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-sm font-bold px-6 py-3.5 rounded-2xl transition border border-slate-300 flex items-center justify-center gap-2 w-full">
                             <i class="fa-solid fa-images text-base"></i> 갤러리에서 선택
                         </button>
+                        <button onclick="openTextInputModal()" class="bg-emerald-50 hover:bg-emerald-100 active:scale-95 text-emerald-700 text-sm font-bold px-5 py-3.5 rounded-2xl transition border border-emerald-200 flex items-center justify-center gap-2 w-full sm:w-auto whitespace-nowrap">
+                            <i class="fa-solid fa-pen-to-square text-base text-emerald-600"></i> 직접 텍스트 입력
+                        </button>
                     </div>
 
-                    <div class="mt-2 pt-3 border-t border-slate-100 w-full flex justify-center">
+                    <div class="mt-2 pt-3 border-t border-slate-100 w-full flex items-center justify-center gap-4 flex-wrap">
                         <button onclick="loadSampleLessonDirectly()" class="text-xs text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-1.5 py-1 px-3 rounded-lg hover:bg-indigo-50 transition">
-                            <i class="fa-regular fa-lightbulb text-amber-500"></i> 샘플 교재로 먼저 둘러보기
+                            <i class="fa-regular fa-lightbulb text-amber-500"></i> 샘플 교재로 둘러보기
+                        </button>
+                        <button onclick="openApiKeyModal()" class="text-xs text-slate-500 hover:text-slate-800 font-medium flex items-center gap-1 py-1 px-2.5 rounded-lg hover:bg-slate-100 transition">
+                            <i class="fa-solid fa-key text-amber-500"></i> API 키 설정
                         </button>
                     </div>
                 </div>
@@ -636,6 +642,42 @@
             <div class="pt-2 border-t border-slate-100 flex justify-end">
                 <button onclick="closeSavedHistoryModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-4 py-2 rounded-xl transition">
                     닫기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Direct Text Input -->
+    <div id="textInputModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl flex flex-col gap-4 border border-slate-100">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-extrabold text-slate-800 text-base flex items-center gap-2">
+                    <i class="fa-solid fa-pen-to-square text-emerald-600"></i> EBS 교재 본문 직접 입력
+                </h3>
+                <button onclick="closeTextInputModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <p class="text-xs text-slate-600 leading-relaxed">
+                EBS 입트영 교재의 영어 본문 및 한글 해석을 복사해서 붙여넣거나 직접 작성해 주세요. Gemini AI가 자동으로 10개 어휘와 문장 영작 문제를 생성합니다.
+            </p>
+
+            <div class="space-y-1.5">
+                <label for="directTextInput" class="text-xs font-bold text-slate-700">본문 내용 (영어 원문 또는 한글 해석 포함)</label>
+                <textarea id="directTextInput" rows="7" placeholder="예시:
+Many people try to make it a rule to exercise regularly in order to stay in shape...
+
+(한글 해석)
+많은 사람들이 건강을 위해 규칙적으로 운동하려 노력합니다..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3 text-xs leading-relaxed focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button onclick="closeTextInputModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-4 py-2.5 rounded-xl transition">
+                    취소
+                </button>
+                <button onclick="submitDirectTextAnalysis()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition shadow flex items-center gap-1.5">
+                    <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i> 입력한 텍스트로 분석 시작
                 </button>
             </div>
         </div>
@@ -1136,13 +1178,100 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
+        function openTextInputModal() {
+            document.getElementById('textInputModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('directTextInput').focus(), 100);
+        }
+
+        function closeTextInputModal() {
+            document.getElementById('textInputModal').classList.add('hidden');
+        }
+
+        async function submitDirectTextAnalysis() {
+            const rawInput = document.getElementById('directTextInput').value.trim();
+            if (!rawInput) {
+                showToast("분석할 본문 내용을 입력해 주세요.");
+                return;
+            }
+
+            closeTextInputModal();
+            document.getElementById('loadingState').classList.remove('hidden');
+            document.getElementById('analyzeBtn').disabled = true;
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: rawInput,
+                        userApiKey: getApiKey()
+                    }),
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                const rawText = await response.text();
+                let result;
+                try {
+                    result = JSON.parse(rawText);
+                } catch (parseErr) {
+                    throw new Error("서버 응답 처리 중 오류가 발생했습니다.");
+                }
+
+                if (!response.ok || !result.success || !result.data) {
+                    throw new Error(result.error || "본문 텍스트 분석 중 오류가 발생했습니다.");
+                }
+
+                const parsedData = result.data;
+                const extractedText = parsedData.extractedText || parsedData.pureEnglishText || rawInput;
+
+                let vocabList = Array.isArray(parsedData.vocabList) && parsedData.vocabList.length > 0
+                    ? parsedData.vocabList
+                    : (SAMPLE_LESSON.vocabList || []).slice(0, 10);
+
+                let passageSentences = Array.isArray(parsedData.passageSentences) && parsedData.passageSentences.length > 0
+                    ? parsedData.passageSentences
+                    : extractSentencesFromPassage({ extractedText, pureEnglishText: parsedData.pureEnglishText, vocabList });
+
+                currentLessonData = {
+                    date: selectedDate,
+                    extractedText: extractedText,
+                    pureEnglishText: parsedData.pureEnglishText || extractCleanEnglishText(extractedText),
+                    passageSummary: parsedData.passageSummary || "입력된 EBS 학습 본문",
+                    passageSentences: passageSentences,
+                    vocabList: vocabList
+                };
+
+                writingList = [];
+                writingReviewCache = {};
+                reviewedWritingItems.clear();
+
+                saveLessonToLocalStorage(selectedDate, currentLessonData);
+                showExtractedTextSection();
+                showToast(`본문 분석 완료! 10개 어휘와 ${passageSentences.length}개 전체 문장이 생성되었습니다.`);
+                switchTab('vocab');
+
+            } catch (err) {
+                console.error("Text analysis error:", err);
+                showToast(`분석 오류: ${err.message || '다시 시도해 주세요.'}`);
+            } finally {
+                clearTimeout(timeoutId);
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('analyzeBtn').disabled = false;
+            }
+        }
+
         function handleImageSelect(event) {
             const file = event.target.files && event.target.files[0];
             if (!file) return;
 
-            showToast("교재 사진을 읽고 크기를 최적화하는 중입니다...");
+            showToast("교재 사진을 준비하는 중입니다...");
 
-            compressImage(file, 1200, 0.82, function(compressedBase64) {
+            compressImage(file, 1000, 0.80, function(compressedBase64) {
                 if (!compressedBase64) {
                     showToast("이미지를 처리할 수 없습니다. 다른 사진을 선택해 주세요.");
                     return;
@@ -1151,7 +1280,7 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
                 document.getElementById('imagePreview').src = activeImageBase64;
                 document.getElementById('uploadPlaceholder').classList.add('hidden');
                 document.getElementById('imagePreviewContainer').classList.remove('hidden');
-                showToast("교재 사진이 준비되었습니다. [본문 분석 & 10개 어휘 추출]을 눌러주세요!");
+                showToast("사진이 준비되었습니다. [본문 분석 & 10개 어휘 추출]을 눌러주세요!");
             });
 
             // Reset input so re-selecting the same file also triggers onchange
@@ -1160,7 +1289,7 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
             } catch (e) {}
         }
 
-        function compressImage(file, maxDimension = 1200, quality = 0.82, callback) {
+        function compressImage(file, maxDimension = 1000, quality = 0.80, callback) {
             if (!file) {
                 if (callback) callback(null);
                 return;

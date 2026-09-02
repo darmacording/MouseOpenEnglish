@@ -117,22 +117,21 @@ async function generateWithFallback({
   speechConfig,
   responseModalities,
   preferredModel = "gemini-3.1-flash-lite",
-  maxOutputTokens = 8192
+  maxOutputTokens = 8192,
+  timeoutMs = 25000
 }) {
   const modelsToTry = [
     preferredModel,
     "gemini-3.1-flash-lite",
-    "gemini-3.6-flash",
-    "gemini-3-flash-preview",
-    "gemini-3.7-flash"
+    "gemini-3.6-flash"
   ].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i);
 
   const keysToTry = [];
   if (userApiKey && typeof userApiKey === "string" && userApiKey.trim().length > 10) {
-    keysToTry.push(userApiKey.trim());
+    keysToTry.push({ key: userApiKey.trim(), isUserKey: true });
   }
-  if (process.env.GEMINI_API_KEY && !keysToTry.includes(process.env.GEMINI_API_KEY)) {
-    keysToTry.push(process.env.GEMINI_API_KEY);
+  if (process.env.GEMINI_API_KEY && !keysToTry.some(k => k.key === process.env.GEMINI_API_KEY)) {
+    keysToTry.push({ key: process.env.GEMINI_API_KEY, isUserKey: false });
   }
 
   if (keysToTry.length === 0) {
@@ -141,7 +140,7 @@ async function generateWithFallback({
 
   let lastError = null;
 
-  for (const apiKey of keysToTry) {
+  for (const { key: apiKey, isUserKey } of keysToTry) {
     const ai = new GoogleGenAI({
       apiKey,
       httpOptions: {
@@ -171,28 +170,35 @@ async function generateWithFallback({
           contentPayload = prompt;
         }
 
-        const response = await ai.models.generateContent({
-          model,
-          contents: contentPayload,
-          config,
+        // Fast timeout wrapper per model attempt
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error(`Model ${model} timeout after ${timeoutMs}ms`)), timeoutMs);
         });
+
+        const response = await Promise.race([
+          ai.models.generateContent({
+            model,
+            contents: contentPayload,
+            config,
+          }),
+          timeoutPromise
+        ]);
 
         return response;
       } catch (err) {
         lastError = err;
-        const msg = (err.message || "").toLowerCase();
-        console.warn(`[Gemini Fallback] Model ${model} failed with key (len ${apiKey.length}): ${err.message?.substring(0, 120)}`);
+        console.warn(`[Gemini Fallback] Model ${model} failed with ${isUserKey ? 'User Key' : 'Server Key'}: ${err.message?.substring(0, 120)}`);
         
-        // If authentication failed on user's custom key, break model loop immediately and switch to server key
-        if (msg.includes("api_key_invalid") || msg.includes("invalid api key") || msg.includes("permission_denied") || msg.includes("403") || msg.includes("401")) {
-          console.warn("[Gemini Fallback] API key authentication failed, switching to backup key...");
+        // If user's custom key failed for any reason, skip remaining models on this key and go to server key immediately
+        if (isUserKey) {
+          console.warn("[Gemini Fallback] User key failed, falling back to server key...");
           break;
         }
       }
     }
   }
 
-  throw lastError || new Error("AI 모델 호출에 실패했습니다. 네트워크 상태나 API 키를 확인해 주세요.");
+  throw lastError || new Error("AI 모델 호출에 실패했습니다. 잠시 후 다시 시도해 주세요.");
 }
 
 // Health & configuration check
