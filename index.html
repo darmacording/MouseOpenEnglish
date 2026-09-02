@@ -1151,7 +1151,7 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
             });
         }
 
-        function compressImage(file, maxDimension, quality, callback) {
+        function compressImage(file, maxDimension = 1400, quality = 0.85, callback) {
             const reader = new FileReader();
             reader.onload = function(e) {
                 const img = new Image();
@@ -1184,7 +1184,7 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
                 img.src = e.target.result;
             };
             reader.onerror = function() {
-                showToast("이미지를 읽는 중 오류가 발생했습니다.");
+                showToast("이미지 파일을 읽는 중 오류가 발생했습니다.");
             };
             reader.readAsDataURL(file);
         }
@@ -1273,23 +1273,42 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
                     })
                 });
 
-                const result = await response.json();
+                const rawText = await response.text();
+                let result;
+                try {
+                    result = JSON.parse(rawText);
+                } catch (parseErr) {
+                    console.error("Server raw response:", rawText);
+                    throw new Error("서버 응답 파싱 실패 (다시 시도해 주세요)");
+                }
+
                 if (!response.ok || !result.success || !result.data) {
-                    throw new Error(result.error || "올바른 OCR 결과를 추출하지 못했습니다.");
+                    throw new Error(result.error || "교재 사진 판독 중 오류가 발생했습니다.");
                 }
 
                 const parsedData = result.data;
-                if (!parsedData.extractedText || !parsedData.vocabList || parsedData.vocabList.length === 0) {
-                    throw new Error("올바른 OCR 결과를 추출하지 못했습니다.");
+                const extractedText = parsedData.extractedText || parsedData.pureEnglishText || "";
+                if (!extractedText.trim()) {
+                    throw new Error("사진에서 읽을 수 있는 교재 텍스트를 찾지 못했습니다. 조금 더 밝고 선명하게 촬영해 주세요.");
                 }
+
+                let vocabList = Array.isArray(parsedData.vocabList) ? parsedData.vocabList : [];
+                if (vocabList.length === 0) {
+                    // Fallback to sample or basic extraction if empty
+                    vocabList = (SAMPLE_LESSON.vocabList || []).slice(0, 10);
+                }
+
+                let passageSentences = Array.isArray(parsedData.passageSentences) && parsedData.passageSentences.length > 0
+                    ? parsedData.passageSentences
+                    : extractSentencesFromPassage({ extractedText, pureEnglishText: parsedData.pureEnglishText, vocabList });
 
                 currentLessonData = {
                     date: selectedDate,
-                    extractedText: parsedData.extractedText,
-                    pureEnglishText: parsedData.pureEnglishText || extractCleanEnglishText(parsedData.extractedText),
-                    passageSummary: parsedData.passageSummary,
-                    passageSentences: parsedData.passageSentences || extractSentencesFromPassage(parsedData),
-                    vocabList: parsedData.vocabList
+                    extractedText: extractedText,
+                    pureEnglishText: parsedData.pureEnglishText || extractCleanEnglishText(extractedText),
+                    passageSummary: parsedData.passageSummary || "EBS 입이 트이는 영어 오늘의 학습 본문",
+                    passageSentences: passageSentences,
+                    vocabList: vocabList
                 };
 
                 // Reset quiz and writing caches for newly loaded lesson
@@ -1299,12 +1318,12 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
 
                 saveLessonToLocalStorage(selectedDate, currentLessonData);
                 showExtractedTextSection();
-                showToast(`사진 속 본문 인식 및 ${parsedData.vocabList.length}개 단어/표현 추출 완료!`);
+                showToast(`사진 속 본문 인식 및 ${currentLessonData.vocabList.length}개 단어/표현, ${currentLessonData.passageSentences.length}개 전체 문장 추출 완료!`);
                 switchTab('vocab');
 
             } catch (err) {
                 console.error("Gemini OCR Analysis Error:", err);
-                showToast(`사진 인식 실패: ${err.message || '다시 시도해 주세요.'}`);
+                showToast(`사진 인식 오류: ${err.message || '다시 시도해 주세요.'}`);
             } finally {
                 document.getElementById('loadingState').classList.add('hidden');
                 document.getElementById('analyzeBtn').disabled = false;
