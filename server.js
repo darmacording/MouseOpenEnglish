@@ -13,7 +13,7 @@ const PORT = 3000;
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
-// Helper to safely parse JSON returned by Gemini AI models
+// Helper to resiliently parse and repair JSON returned by Gemini AI models
 function safeJsonParse(rawText, defaultValue = null) {
   if (!rawText || typeof rawText !== "string") {
     if (defaultValue !== null) return defaultValue;
@@ -21,55 +21,87 @@ function safeJsonParse(rawText, defaultValue = null) {
   }
 
   let cleaned = rawText.trim();
-  // Strip markdown code fences like ```json ... ``` or ``` ... ```
+  // Strip markdown code fences
   cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
 
-  // Try standard JSON.parse first
+  // 1. Standard JSON.parse
   try {
-    return JSON.parse(cleaned);
+    const data = JSON.parse(cleaned);
+    if (data && typeof data === "object") return data;
   } catch (initialErr) {
-    // Attempt to extract json between the outermost { } or [ ]
+    // 2. Clean unescaped newlines/tabs inside quotes & trailing commas
+    try {
+      let sanitized = cleaned.replace(/"(?:[^"\\]|\\.)*"/gs, (str) => {
+        return str.replace(/[\n\r]/g, "\\n").replace(/\t/g, "\\t");
+      });
+      sanitized = sanitized
+        .replace(/,\s*([}\]])/g, "$1")
+        .replace(/[\u0000-\u0008\u000B-\u000C\u000E-\u001F]+/g, "");
+      const data = JSON.parse(sanitized);
+      if (data && typeof data === "object") return data;
+    } catch (e2) {}
+
+    // 3. Extract between first { and last }
     const firstBrace = cleaned.indexOf("{");
     const lastBrace = cleaned.lastIndexOf("}");
     if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
       const candidate = cleaned.substring(firstBrace, lastBrace + 1);
       try {
-        return JSON.parse(candidate);
-      } catch (e) {
-        // Fix unescaped newlines/tabs inside string literals & trailing commas
+        const data = JSON.parse(candidate);
+        if (data && typeof data === "object") return data;
+      } catch (e3) {
         try {
           let sanitized = candidate.replace(/"(?:[^"\\]|\\.)*"/gs, (str) => {
-            return str.replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t");
+            return str.replace(/[\n\r]/g, "\\n").replace(/\t/g, "\\t");
           });
           sanitized = sanitized
             .replace(/,\s*([}\]])/g, "$1")
             .replace(/[\u0000-\u0008\u000B-\u000C\u000E-\u001F]+/g, "");
-          return JSON.parse(sanitized);
-        } catch (e2) {
-          // Continue to bracket check
-        }
+          const data = JSON.parse(sanitized);
+          if (data && typeof data === "object") return data;
+        } catch (e4) {}
       }
     }
 
-    const firstBracket = cleaned.indexOf("[");
-    const lastBracket = cleaned.lastIndexOf("]");
-    if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
-      try {
-        const candidate = cleaned.substring(firstBracket, lastBracket + 1);
-        return JSON.parse(candidate);
-      } catch (e) {
-        try {
-          let sanitized = candidate.replace(/"(?:[^"\\]|\\.)*"/gs, (str) => {
-            return str.replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t");
-          });
-          sanitized = sanitized.replace(/,\s*([}\]])/g, "$1");
-          return JSON.parse(sanitized);
-        } catch (e2) {}
-      }
+    // 4. Regex-based field recovery fallback
+    const result = {
+      extractedText: "",
+      pureEnglishText: "",
+      passageSummary: "오늘의 EBS 입트영 학습 내용",
+      passageSentences: [],
+      vocabList: []
+    };
+
+    const extMatch = cleaned.match(/"extractedText"\s*:\s*"((?:[^"\\]|\\.)*)"/s);
+    if (extMatch) result.extractedText = extMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, "\"").replace(/\\\\/g, "\\");
+
+    const pureMatch = cleaned.match(/"pureEnglishText"\s*:\s*"((?:[^"\\]|\\.)*)"/s);
+    if (pureMatch) result.pureEnglishText = pureMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, "\"").replace(/\\\\/g, "\\");
+
+    const sumMatch = cleaned.match(/"passageSummary"\s*:\s*"((?:[^"\\]|\\.)*)"/s);
+    if (sumMatch) result.passageSummary = sumMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, "\"");
+
+    // Extract vocabList items via regex
+    const vocabItemRegex = /\{\s*"id"\s*:\s*(\d+)[^}]*?"english"\s*:\s*"([^"]+)"[^}]*?"korean"\s*:\s*"([^"]+)"/g;
+    let vMatch;
+    while ((vMatch = vocabItemRegex.exec(cleaned)) !== null) {
+      result.vocabList.push({
+        id: parseInt(vMatch[1], 10),
+        type: "word",
+        english: vMatch[2],
+        korean: vMatch[3],
+        phonetic: "",
+        exampleEn: "",
+        exampleKo: ""
+      });
+    }
+
+    if (result.extractedText || result.pureEnglishText || result.vocabList.length > 0) {
+      return result;
     }
 
     if (defaultValue !== null) return defaultValue;
-    throw new Error(`JSON 파싱 오류 (${initialErr.message})`);
+    throw new Error(`AI 응답 형식 처리 중 오류 (${initialErr.message})`);
   }
 }
 
@@ -91,6 +123,7 @@ async function generateWithFallback({
     preferredModel,
     "gemini-3-flash-preview",
     "gemini-3.6-flash",
+    "gemini-3.1-flash-lite",
     "gemini-3.7-flash"
   ].filter((v, i, a) => a.indexOf(v) === i);
 
@@ -171,20 +204,37 @@ app.post("/api/analyze", async (req, res) => {
       return res.status(400).json({ error: "본문 사진이나 텍스트를 제공해 주세요." });
     }
 
-    const systemInstruction = `You are an expert OCR and language learning extraction engine for EBS '입이 트이는 영어' (입트영).
+    const systemInstruction = `You are an expert OCR and English learning engine for EBS '입이 트이는 영어' (입트영).
 
-CRITICAL INSTRUCTIONS FOR OCR & EXTRACTION:
-1. STRICT OCR: Carefully read, transcribe, and extract the ACTUAL text written inside the user's provided image or text notes. DO NOT generate random or fictional textbook passages.
-2. Formulate "extractedText": Complete transcribed original text with natural Korean or bilingual presentation.
-3. Formulate "pureEnglishText": ONLY the pure English passage sentences (without Korean translations, headers, or brackets), formatted perfectly for natural native American audio reading.
-4. Formulate "passageSummary": A concise 1-sentence summary in Korean describing the specific topic of the extracted passage.
-5. Formulate "passageSentences": Extract ALL individual sentences from the textbook passage in exact sequential order (Extract EVERY single sentence from the entire extracted passage from first to last sentence). For each sentence provide:
-   - id: 1-based sequential integer (1, 2, 3, ...)
-   - english: The exact English sentence from the passage.
-   - korean: Natural, accurate Korean translation of this sentence.
-   - targetKeyword: The primary key expression or vocabulary used in this sentence, or empty string if none.
-6. Formulate "vocabList": Extract EXACTLY 10 key items (a balanced mix of type: "word" and type: "expression", EXACTLY 10 ITEMS IN TOTAL) THAT DIRECTLY APPEAR IN OR ARE DERIVED FROM THE EXTRACTED PASSAGE.
-7. Provide high-quality Korean translations, phonetic guides, and realistic example sentences for each of the 10 items.`;
+YOUR MISSION:
+1. STRICT OCR: Transcribe all English and Korean text visible in the user's photo/input accurately.
+2. Return a SINGLE valid JSON object with the following schema:
+{
+  "extractedText": "Complete transcribed textbook passage text with Korean notes/translations",
+  "pureEnglishText": "ONLY the clean English passage sentences without headers or Korean, ready for audio narration",
+  "passageSummary": "한 줄 요약 (예: 재택근무 트렌드와 원활한 협업 노하우)",
+  "passageSentences": [
+    {
+      "id": 1,
+      "english": "Exact English sentence 1",
+      "korean": "자연스러운 한국어 번역 1",
+      "targetKeyword": "중심 표현 또는 빈칸"
+    }
+  ],
+  "vocabList": [
+    {
+      "id": 1,
+      "type": "word" or "expression",
+      "english": "key word or phrase",
+      "korean": "핵심 의미",
+      "phonetic": "/발음기호/",
+      "exampleEn": "Natural example sentence containing this word",
+      "exampleKo": "예문 한국어 해석"
+    }
+  ]
+}
+3. IMPORTANT: Extract EXACTLY 10 key items in "vocabList" (words and expressions) appearing in or closely related to the textbook passage.
+4. Extract ALL sequential sentences from the passage in "passageSentences" for complete writing practice.`;
 
     const parts = [];
     if (imageBase64) {
@@ -210,11 +260,11 @@ CRITICAL INSTRUCTIONS FOR OCR & EXTRACTION:
 
     if (text && text.trim()) {
       parts.push({
-        text: `Analyze the provided text notes/passage:\n${text}\n\nPerform accurate transcription, extract ALL passage sentences for writing practice, create pure English audio text, and extract EXACTLY 10 key English words and expressions.`,
+        text: `Transcribe and analyze this EBS English passage:\n${text}\n\nReturn the complete JSON object with extractedText, pureEnglishText, passageSummary, all passageSentences, and exactly 10 vocabList items.`,
       });
     } else {
       parts.push({
-        text: "Carefully analyze the attached image. Extract all text visible in the photo via OCR, provide pure English audio reading text, extract ALL individual passage sentences for comprehensive writing practice, and extract EXACTLY 10 key English words and expressions from this page.",
+        text: "Perform accurate OCR on this textbook photo. Extract the full passage text, clean English audio text, Korean summary, ALL sentences in order, and EXACTLY 10 key vocabulary/expression items as JSON.",
       });
     }
 
@@ -224,64 +274,46 @@ CRITICAL INSTRUCTIONS FOR OCR & EXTRACTION:
       preferredModel: "gemini-3-flash-preview",
       systemInstruction,
       responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          extractedText: { type: Type.STRING },
-          pureEnglishText: { type: Type.STRING },
-          passageSummary: { type: Type.STRING },
-          passageSentences: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                id: { type: Type.INTEGER },
-                english: { type: Type.STRING },
-                korean: { type: Type.STRING },
-                targetKeyword: { type: Type.STRING },
-              },
-              required: ["id", "english", "korean"],
-            },
-          },
-          vocabList: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                id: { type: Type.INTEGER },
-                type: { type: Type.STRING },
-                english: { type: Type.STRING },
-                korean: { type: Type.STRING },
-                phonetic: { type: Type.STRING },
-                exampleEn: { type: Type.STRING },
-                exampleKo: { type: Type.STRING },
-              },
-              required: ["id", "type", "english", "korean", "phonetic", "exampleEn", "exampleKo"],
-            },
-          },
-        },
-        required: ["extractedText", "pureEnglishText", "passageSummary", "passageSentences", "vocabList"],
-      },
     });
 
-    const parsedData = safeJsonParse(response.text);
+    const parsedData = safeJsonParse(response.text, {});
 
     // Ensure fallback defaults if model returned partial fields
-    if (!parsedData.extractedText) {
-      parsedData.extractedText = parsedData.pureEnglishText || "교재 본문 텍스트";
+    if (!parsedData.extractedText || typeof parsedData.extractedText !== "string") {
+      parsedData.extractedText = parsedData.pureEnglishText || "EBS 입이 트이는 영어 본문";
     }
-    if (!parsedData.pureEnglishText) {
+    if (!parsedData.pureEnglishText || typeof parsedData.pureEnglishText !== "string") {
       parsedData.pureEnglishText = parsedData.extractedText;
     }
-    if (!parsedData.passageSummary) {
+    if (!parsedData.passageSummary || typeof parsedData.passageSummary !== "string") {
       parsedData.passageSummary = "EBS 입이 트이는 영어 오늘의 학습 본문";
     }
-    if (!Array.isArray(parsedData.passageSentences)) {
-      parsedData.passageSentences = [];
+    if (!Array.isArray(parsedData.passageSentences) || parsedData.passageSentences.length === 0) {
+      // Auto split sentences from English text
+      const sList = (parsedData.pureEnglishText || parsedData.extractedText)
+        .split(/(?<=[.?!])\s+/)
+        .filter((s) => s.trim().length > 3);
+      parsedData.passageSentences = sList.map((sent, idx) => ({
+        id: idx + 1,
+        english: sent.trim(),
+        korean: "해당 문장을 우리말로 해석해보세요.",
+        targetKeyword: "",
+      }));
     }
     if (!Array.isArray(parsedData.vocabList)) {
       parsedData.vocabList = [];
     }
+
+    // Ensure each vocabList item has valid properties
+    parsedData.vocabList = parsedData.vocabList.map((item, idx) => ({
+      id: item.id || idx + 1,
+      type: item.type === "word" ? "word" : "expression",
+      english: item.english || `Expression ${idx + 1}`,
+      korean: item.korean || "핵심 표현",
+      phonetic: item.phonetic || "",
+      exampleEn: item.exampleEn || item.english || "",
+      exampleKo: item.exampleKo || item.korean || "",
+    }));
 
     res.json({ success: true, data: parsedData });
   } catch (error) {

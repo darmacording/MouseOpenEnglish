@@ -1137,54 +1137,78 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
         }
 
         function handleImageSelect(event) {
-            const file = event.target.files[0];
+            const file = event.target.files && event.target.files[0];
             if (!file) return;
 
             showToast("교재 사진을 읽고 크기를 최적화하는 중입니다...");
 
-            compressImage(file, 1600, 0.8, function(compressedBase64) {
+            compressImage(file, 1200, 0.82, function(compressedBase64) {
+                if (!compressedBase64) {
+                    showToast("이미지를 처리할 수 없습니다. 다른 사진을 선택해 주세요.");
+                    return;
+                }
                 activeImageBase64 = compressedBase64;
                 document.getElementById('imagePreview').src = activeImageBase64;
                 document.getElementById('uploadPlaceholder').classList.add('hidden');
                 document.getElementById('imagePreviewContainer').classList.remove('hidden');
-                showToast("교재 사진이 준비되었습니다. [10개 단어/표현 추출]을 눌러주세요!");
+                showToast("교재 사진이 준비되었습니다. [본문 분석 & 10개 어휘 추출]을 눌러주세요!");
             });
+
+            // Reset input so re-selecting the same file also triggers onchange
+            try {
+                event.target.value = '';
+            } catch (e) {}
         }
 
-        function compressImage(file, maxDimension = 1400, quality = 0.85, callback) {
+        function compressImage(file, maxDimension = 1200, quality = 0.82, callback) {
+            if (!file) {
+                if (callback) callback(null);
+                return;
+            }
+
             const reader = new FileReader();
             reader.onload = function(e) {
+                const dataUrl = e.target.result;
                 const img = new Image();
                 img.onload = function() {
-                    let width = img.width;
-                    let height = img.height;
+                    try {
+                        let width = img.width;
+                        let height = img.height;
 
-                    if (width > maxDimension || height > maxDimension) {
-                        if (width > height) {
-                            height = Math.round((height * maxDimension) / width);
-                            width = maxDimension;
-                        } else {
-                            width = Math.round((width * maxDimension) / height);
-                            height = maxDimension;
+                        if (width > maxDimension || height > maxDimension) {
+                            if (width > height) {
+                                height = Math.round((height * maxDimension) / width);
+                                width = maxDimension;
+                            } else {
+                                width = Math.round((width * maxDimension) / height);
+                                height = maxDimension;
+                            }
                         }
+
+                        const canvas = document.createElement('canvas');
+                        canvas.width = Math.max(width, 100);
+                        canvas.height = Math.max(height, 100);
+                        const ctx = canvas.getContext('2d');
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                        callback(compressedDataUrl);
+                    } catch (canvasErr) {
+                        console.warn("Canvas compression fallback:", canvasErr);
+                        callback(dataUrl);
                     }
-
-                    const canvas = document.createElement('canvas');
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-
-                    const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-                    callback(compressedDataUrl);
                 };
                 img.onerror = function() {
-                    callback(e.target.result);
+                    console.warn("Image load fallback to raw data URL");
+                    callback(dataUrl);
                 };
-                img.src = e.target.result;
+                img.src = dataUrl;
             };
             reader.onerror = function() {
                 showToast("이미지 파일을 읽는 중 오류가 발생했습니다.");
+                if (callback) callback(null);
             };
             reader.readAsDataURL(file);
         }
@@ -1262,6 +1286,9 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
             document.getElementById('loadingState').classList.remove('hidden');
             document.getElementById('analyzeBtn').disabled = true;
 
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 60000);
+
             try {
                 const response = await fetch('/api/analyze', {
                     method: 'POST',
@@ -1270,8 +1297,11 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
                         imageBase64: activeImageBase64,
                         text: '',
                         userApiKey: getApiKey()
-                    })
+                    }),
+                    signal: controller.signal
                 });
+
+                clearTimeout(timeoutId);
 
                 const rawText = await response.text();
                 let result;
@@ -1279,7 +1309,7 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
                     result = JSON.parse(rawText);
                 } catch (parseErr) {
                     console.error("Server raw response:", rawText);
-                    throw new Error("서버 응답 파싱 실패 (다시 시도해 주세요)");
+                    throw new Error("서버 응답 처리 중 일시적인 지연이 발생했습니다. 다시 한 번 시도해 주세요.");
                 }
 
                 if (!response.ok || !result.success || !result.data) {
@@ -1323,8 +1353,13 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
 
             } catch (err) {
                 console.error("Gemini OCR Analysis Error:", err);
-                showToast(`사진 인식 오류: ${err.message || '다시 시도해 주세요.'}`);
+                if (err.name === 'AbortError') {
+                    showToast("분석 요청 시간이 초과되었습니다. 다시 한 번 [본문 분석]을 눌러주세요.");
+                } else {
+                    showToast(`사진 인식 오류: ${err.message || '다시 시도해 주세요.'}`);
+                }
             } finally {
+                clearTimeout(timeoutId);
                 document.getElementById('loadingState').classList.add('hidden');
                 document.getElementById('analyzeBtn').disabled = false;
             }
