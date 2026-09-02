@@ -15,8 +15,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
-    <!-- Tesseract.js v5 for Browser On-Device Fast OCR -->
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -208,21 +206,13 @@
                 </div>
             </div>
 
-            <!-- Loading Spinner & Step Progress -->
+            <!-- Loading Spinner -->
             <div id="loadingState" class="hidden bg-white p-6 md:p-8 rounded-3xl shadow-lg border border-indigo-100 text-center flex flex-col items-center justify-center gap-3 max-w-xl mx-auto">
-                <div class="relative flex items-center justify-center">
-                    <div class="w-14 h-14 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
-                    <i id="loadingStepIcon" class="fa-solid fa-camera-retro absolute text-indigo-600 text-base"></i>
-                </div>
+                <div class="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
                 <div class="space-y-1">
-                    <h4 id="loadingTitle" class="font-extrabold text-slate-800 text-sm sm:text-base">1단계: 브라우저 온디바이스 OCR로 사진 텍스트 판독 중...</h4>
-                    <p id="loadingSubtitle" class="text-xs text-slate-500">기기 내부에서 지연 없이 신속하게 영문 본문을 인식하고 있습니다.</p>
+                    <h4 class="font-extrabold text-slate-800 text-sm sm:text-base">교재 사진을 정밀 OCR 판독 중입니다...</h4>
+                    <p class="text-xs text-slate-500">사진 속 영어 본문, 한글 해석, 10개 핵심 어휘 및 영작 문제를 생성하고 있습니다.</p>
                 </div>
-                <!-- Progress Bar -->
-                <div id="ocrProgressBarContainer" class="w-full max-w-xs bg-slate-100 rounded-full h-2.5 overflow-hidden mt-1 border border-slate-200">
-                    <div id="ocrProgressBar" class="bg-indigo-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
-                </div>
-                <span id="ocrProgressPercent" class="text-[11px] font-extrabold text-indigo-600">0%</span>
             </div>
 
             <!-- OCR Extracted Text & Studio Native Audio Player Section -->
@@ -1151,32 +1141,13 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        function updateLoadingProgress(step, title, subtitle, percent = 0) {
-            const loadingState = document.getElementById('loadingState');
-            if (loadingState) loadingState.classList.remove('hidden');
-            const titleEl = document.getElementById('loadingTitle');
-            const subEl = document.getElementById('loadingSubtitle');
-            const barEl = document.getElementById('ocrProgressBar');
-            const pctEl = document.getElementById('ocrProgressPercent');
-            const iconEl = document.getElementById('loadingStepIcon');
-
-            if (titleEl && title) titleEl.innerText = title;
-            if (subEl && subtitle) subEl.innerText = subtitle;
-            if (barEl) barEl.style.width = `${Math.min(100, Math.max(0, Math.round(percent)))}%`;
-            if (pctEl) pctEl.innerText = `${Math.min(100, Math.max(0, Math.round(percent)))}%`;
-            if (iconEl) {
-                if (step === 1) iconEl.className = "fa-solid fa-camera-retro absolute text-indigo-600 text-base";
-                else if (step === 2) iconEl.className = "fa-solid fa-wand-magic-sparkles absolute text-indigo-600 text-base animate-bounce";
-            }
-        }
-
         function handleImageSelect(event) {
             const file = event.target.files && event.target.files[0];
             if (!file) return;
 
             showToast("교재 사진을 준비하는 중입니다...");
 
-            compressImage(file, 1200, 0.85, function(compressedBase64) {
+            compressImage(file, 1600, 0.88, function(compressedBase64) {
                 if (!compressedBase64) {
                     showToast("이미지를 처리할 수 없습니다. 다른 사진을 선택해 주세요.");
                     return;
@@ -1193,7 +1164,7 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
             } catch (e) {}
         }
 
-        function compressImage(file, maxDimension = 1000, quality = 0.80, callback) {
+        function compressImage(file, maxDimension = 1600, quality = 0.88, callback) {
             if (!file) {
                 if (callback) callback(null);
                 return;
@@ -1319,35 +1290,6 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
             document.getElementById('loadingState').classList.remove('hidden');
             document.getElementById('analyzeBtn').disabled = true;
 
-            let extractedOcrText = "";
-
-            // Step 1: On-Device Tesseract.js OCR (WebAssembly fast browser recognition)
-            try {
-                updateLoadingProgress(1, "1단계: 브라우저 온디바이스 OCR로 사진 텍스트 판독 중...", "기기 내부에서 신속하게 영문 텍스트를 판독합니다.", 15);
-
-                if (window.Tesseract && typeof window.Tesseract.recognize === 'function') {
-                    const ocrResult = await Tesseract.recognize(
-                        activeImageBase64,
-                        'eng',
-                        {
-                            logger: m => {
-                                if (m && m.status === 'recognizing text' && typeof m.progress === 'number') {
-                                    const pct = Math.round(15 + m.progress * 65);
-                                    updateLoadingProgress(1, "1단계: 브라우저 온디바이스 OCR로 사진 텍스트 판독 중...", `텍스트 판독 진행률: ${Math.round(m.progress * 100)}%`, pct);
-                                }
-                            }
-                        }
-                    );
-                    extractedOcrText = (ocrResult && ocrResult.data && ocrResult.data.text) ? ocrResult.data.text.trim() : "";
-                    console.log("[Tesseract.js] On-device extracted text length:", extractedOcrText.length);
-                }
-            } catch (tesseractErr) {
-                console.warn("[Tesseract.js] On-device OCR fallback:", tesseractErr);
-            }
-
-            // Step 2: AI Generation for 10 Vocab & Sentences
-            updateLoadingProgress(2, "2단계: AI가 10개 핵심 어휘 & 영작 문장 생성 중...", "인식된 본문을 분석하여 10개 어휘와 문장 세트를 생성하고 있습니다.", 85);
-
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 60000);
 
@@ -1356,8 +1298,7 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        text: extractedOcrText,
-                        imageBase64: extractedOcrText.length < 25 ? activeImageBase64 : '',
+                        imageBase64: activeImageBase64,
                         userApiKey: getApiKey()
                     }),
                     signal: controller.signal
@@ -1381,10 +1322,8 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
                     throw new Error(result.error || "교재 사진 판독 중 오류가 발생했습니다.");
                 }
 
-                updateLoadingProgress(2, "완료! 학습 데이터를 화면에 표시합니다...", "잠시 후 화면이 전환됩니다.", 100);
-
                 const parsedData = result.data;
-                const extractedText = parsedData.extractedText || parsedData.pureEnglishText || extractedOcrText || "";
+                const extractedText = parsedData.extractedText || parsedData.pureEnglishText || "";
                 if (!extractedText.trim()) {
                     throw new Error("사진에서 읽을 수 있는 교재 텍스트를 찾지 못했습니다. 조금 더 밝고 선명하게 촬영해 주세요.");
                 }
@@ -1413,7 +1352,7 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
 
                 saveLessonToLocalStorage(selectedDate, currentLessonData);
                 showExtractedTextSection();
-                showToast(`온디바이스 OCR 완료! ${currentLessonData.vocabList.length}개 핵심 어휘 & ${currentLessonData.passageSentences.length}개 영작 문장 생성.`);
+                showToast(`교재 사진 분석 완료! ${currentLessonData.vocabList.length}개 핵심 어휘 & ${currentLessonData.passageSentences.length}개 영작 문장 생성.`);
                 switchTab('vocab');
 
             } catch (err) {
