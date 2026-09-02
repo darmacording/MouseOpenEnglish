@@ -116,16 +116,16 @@ async function generateWithFallback({
   responseMimeType,
   speechConfig,
   responseModalities,
-  preferredModel = "gemini-3-flash-preview",
+  preferredModel = "gemini-3.1-flash-lite",
   maxOutputTokens = 8192
 }) {
   const modelsToTry = [
     preferredModel,
-    "gemini-3-flash-preview",
-    "gemini-3.6-flash",
     "gemini-3.1-flash-lite",
+    "gemini-3.6-flash",
+    "gemini-3-flash-preview",
     "gemini-3.7-flash"
-  ].filter((v, i, a) => a.indexOf(v) === i);
+  ].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i);
 
   const keysToTry = [];
   if (userApiKey && typeof userApiKey === "string" && userApiKey.trim().length > 10) {
@@ -180,7 +180,14 @@ async function generateWithFallback({
         return response;
       } catch (err) {
         lastError = err;
+        const msg = (err.message || "").toLowerCase();
         console.warn(`[Gemini Fallback] Model ${model} failed with key (len ${apiKey.length}): ${err.message?.substring(0, 120)}`);
+        
+        // If authentication failed on user's custom key, break model loop immediately and switch to server key
+        if (msg.includes("api_key_invalid") || msg.includes("invalid api key") || msg.includes("permission_denied") || msg.includes("403") || msg.includes("401")) {
+          console.warn("[Gemini Fallback] API key authentication failed, switching to backup key...");
+          break;
+        }
       }
     }
   }
@@ -271,7 +278,7 @@ YOUR MISSION:
     const response = await generateWithFallback({
       userApiKey,
       parts,
-      preferredModel: "gemini-3-flash-preview",
+      preferredModel: "gemini-3.1-flash-lite",
       systemInstruction,
       responseMimeType: "application/json",
     });
@@ -401,7 +408,7 @@ Return concise HTML (clean tags, bullet points):
     const response = await generateWithFallback({
       userApiKey,
       prompt,
-      preferredModel: "gemini-3-flash-preview",
+      preferredModel: "gemini-3.1-flash-lite",
     });
 
     const text = response.text || "분석을 가져올 수 없습니다.";
@@ -448,7 +455,7 @@ Format your response in clean, attractive HTML:
     const response = await generateWithFallback({
       userApiKey,
       prompt,
-      preferredModel: "gemini-3-flash-preview",
+      preferredModel: "gemini-3.1-flash-lite",
     });
 
     let html = response.text || "";
@@ -492,7 +499,7 @@ Korean: "${koreanSentence}"
 Student English: "${userEnglish}"
 Target Phrase: "${targetExpression || ""}"
 Reference: "${referenceEnglish || ""}"`,
-      preferredModel: "gemini-3-flash-preview",
+      preferredModel: "gemini-3.1-flash-lite",
       systemInstruction,
       responseMimeType: "application/json",
       responseSchema: {
@@ -555,7 +562,7 @@ Rules:
       userApiKey,
       contents,
       systemInstruction: systemPrompt,
-      preferredModel: "gemini-3-flash-preview",
+      preferredModel: "gemini-3.1-flash-lite",
     });
 
     const reply = response.text || "Sorry, I couldn't process that.";

@@ -1287,7 +1287,7 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
             document.getElementById('analyzeBtn').disabled = true;
 
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 60000);
+            const timeoutId = setTimeout(() => controller.abort(), 90000);
 
             try {
                 const response = await fetch('/api/analyze', {
@@ -1309,7 +1309,10 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
                     result = JSON.parse(rawText);
                 } catch (parseErr) {
                     console.error("Server raw response:", rawText);
-                    throw new Error("서버 응답 처리 중 일시적인 지연이 발생했습니다. 다시 한 번 시도해 주세요.");
+                    if (response.status === 504 || response.status === 502) {
+                        throw new Error("클라우드 서버 일시 지연(504). 다시 한 번 [본문 분석]을 눌러주세요.");
+                    }
+                    throw new Error("서버 응답을 처리하는 중 오류가 발생했습니다. 다시 시도해 주세요.");
                 }
 
                 if (!response.ok || !result.success || !result.data) {
