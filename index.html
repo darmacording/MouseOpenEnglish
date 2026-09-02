@@ -15,6 +15,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <!-- Tesseract.js v5 for Browser On-Device Fast OCR -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -177,9 +179,6 @@
                         <button onclick="document.getElementById('imageInput').click()" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-sm font-bold px-6 py-3.5 rounded-2xl transition border border-slate-300 flex items-center justify-center gap-2 w-full">
                             <i class="fa-solid fa-images text-base"></i> 갤러리에서 선택
                         </button>
-                        <button onclick="openTextInputModal()" class="bg-emerald-50 hover:bg-emerald-100 active:scale-95 text-emerald-700 text-sm font-bold px-5 py-3.5 rounded-2xl transition border border-emerald-200 flex items-center justify-center gap-2 w-full sm:w-auto whitespace-nowrap">
-                            <i class="fa-solid fa-pen-to-square text-base text-emerald-600"></i> 직접 텍스트 입력
-                        </button>
                     </div>
 
                     <div class="mt-2 pt-3 border-t border-slate-100 w-full flex items-center justify-center gap-4 flex-wrap">
@@ -209,11 +208,21 @@
                 </div>
             </div>
 
-            <!-- Loading Spinner -->
-            <div id="loadingState" class="hidden bg-white p-6 md:p-8 rounded-2xl shadow-md border border-slate-200 text-center flex flex-col items-center justify-center gap-2">
-                <div class="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-                <h4 class="font-bold text-slate-800 text-sm sm:text-base">Gemini 3 Flash AI가 교재 이미지를 정밀 분석 중입니다...</h4>
-                <p class="text-xs text-slate-500">정밀 OCR 문자 판독 및 10개 핵심 단어/표현 퀴즈 세트를 생성하고 있습니다.</p>
+            <!-- Loading Spinner & Step Progress -->
+            <div id="loadingState" class="hidden bg-white p-6 md:p-8 rounded-3xl shadow-lg border border-indigo-100 text-center flex flex-col items-center justify-center gap-3 max-w-xl mx-auto">
+                <div class="relative flex items-center justify-center">
+                    <div class="w-14 h-14 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+                    <i id="loadingStepIcon" class="fa-solid fa-camera-retro absolute text-indigo-600 text-base"></i>
+                </div>
+                <div class="space-y-1">
+                    <h4 id="loadingTitle" class="font-extrabold text-slate-800 text-sm sm:text-base">1단계: 브라우저 온디바이스 OCR로 사진 텍스트 판독 중...</h4>
+                    <p id="loadingSubtitle" class="text-xs text-slate-500">기기 내부에서 지연 없이 신속하게 영문 본문을 인식하고 있습니다.</p>
+                </div>
+                <!-- Progress Bar -->
+                <div id="ocrProgressBarContainer" class="w-full max-w-xs bg-slate-100 rounded-full h-2.5 overflow-hidden mt-1 border border-slate-200">
+                    <div id="ocrProgressBar" class="bg-indigo-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+                <span id="ocrProgressPercent" class="text-[11px] font-extrabold text-indigo-600">0%</span>
             </div>
 
             <!-- OCR Extracted Text & Studio Native Audio Player Section -->
@@ -642,42 +651,6 @@
             <div class="pt-2 border-t border-slate-100 flex justify-end">
                 <button onclick="closeSavedHistoryModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-4 py-2 rounded-xl transition">
                     닫기
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal for Direct Text Input -->
-    <div id="textInputModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl flex flex-col gap-4 border border-slate-100">
-            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-                <h3 class="font-extrabold text-slate-800 text-base flex items-center gap-2">
-                    <i class="fa-solid fa-pen-to-square text-emerald-600"></i> EBS 교재 본문 직접 입력
-                </h3>
-                <button onclick="closeTextInputModal()" class="text-slate-400 hover:text-slate-600 p-1">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
-            </div>
-
-            <p class="text-xs text-slate-600 leading-relaxed">
-                EBS 입트영 교재의 영어 본문 및 한글 해석을 복사해서 붙여넣거나 직접 작성해 주세요. Gemini AI가 자동으로 10개 어휘와 문장 영작 문제를 생성합니다.
-            </p>
-
-            <div class="space-y-1.5">
-                <label for="directTextInput" class="text-xs font-bold text-slate-700">본문 내용 (영어 원문 또는 한글 해석 포함)</label>
-                <textarea id="directTextInput" rows="7" placeholder="예시:
-Many people try to make it a rule to exercise regularly in order to stay in shape...
-
-(한글 해석)
-많은 사람들이 건강을 위해 규칙적으로 운동하려 노력합니다..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3 text-xs leading-relaxed focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
-            </div>
-
-            <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
-                <button onclick="closeTextInputModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-4 py-2.5 rounded-xl transition">
-                    취소
-                </button>
-                <button onclick="submitDirectTextAnalysis()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition shadow flex items-center gap-1.5">
-                    <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i> 입력한 텍스트로 분석 시작
                 </button>
             </div>
         </div>
@@ -1178,90 +1151,22 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        function openTextInputModal() {
-            document.getElementById('textInputModal').classList.remove('hidden');
-            setTimeout(() => document.getElementById('directTextInput').focus(), 100);
-        }
+        function updateLoadingProgress(step, title, subtitle, percent = 0) {
+            const loadingState = document.getElementById('loadingState');
+            if (loadingState) loadingState.classList.remove('hidden');
+            const titleEl = document.getElementById('loadingTitle');
+            const subEl = document.getElementById('loadingSubtitle');
+            const barEl = document.getElementById('ocrProgressBar');
+            const pctEl = document.getElementById('ocrProgressPercent');
+            const iconEl = document.getElementById('loadingStepIcon');
 
-        function closeTextInputModal() {
-            document.getElementById('textInputModal').classList.add('hidden');
-        }
-
-        async function submitDirectTextAnalysis() {
-            const rawInput = document.getElementById('directTextInput').value.trim();
-            if (!rawInput) {
-                showToast("분석할 본문 내용을 입력해 주세요.");
-                return;
-            }
-
-            closeTextInputModal();
-            document.getElementById('loadingState').classList.remove('hidden');
-            document.getElementById('analyzeBtn').disabled = true;
-
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 60000);
-
-            try {
-                const response = await fetch('/api/analyze', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        text: rawInput,
-                        userApiKey: getApiKey()
-                    }),
-                    signal: controller.signal
-                });
-
-                clearTimeout(timeoutId);
-
-                const rawText = await response.text();
-                let result;
-                try {
-                    result = JSON.parse(rawText);
-                } catch (parseErr) {
-                    throw new Error("서버 응답 처리 중 오류가 발생했습니다.");
-                }
-
-                if (!response.ok || !result.success || !result.data) {
-                    throw new Error(result.error || "본문 텍스트 분석 중 오류가 발생했습니다.");
-                }
-
-                const parsedData = result.data;
-                const extractedText = parsedData.extractedText || parsedData.pureEnglishText || rawInput;
-
-                let vocabList = Array.isArray(parsedData.vocabList) && parsedData.vocabList.length > 0
-                    ? parsedData.vocabList
-                    : (SAMPLE_LESSON.vocabList || []).slice(0, 10);
-
-                let passageSentences = Array.isArray(parsedData.passageSentences) && parsedData.passageSentences.length > 0
-                    ? parsedData.passageSentences
-                    : extractSentencesFromPassage({ extractedText, pureEnglishText: parsedData.pureEnglishText, vocabList });
-
-                currentLessonData = {
-                    date: selectedDate,
-                    extractedText: extractedText,
-                    pureEnglishText: parsedData.pureEnglishText || extractCleanEnglishText(extractedText),
-                    passageSummary: parsedData.passageSummary || "입력된 EBS 학습 본문",
-                    passageSentences: passageSentences,
-                    vocabList: vocabList
-                };
-
-                writingList = [];
-                writingReviewCache = {};
-                reviewedWritingItems.clear();
-
-                saveLessonToLocalStorage(selectedDate, currentLessonData);
-                showExtractedTextSection();
-                showToast(`본문 분석 완료! 10개 어휘와 ${passageSentences.length}개 전체 문장이 생성되었습니다.`);
-                switchTab('vocab');
-
-            } catch (err) {
-                console.error("Text analysis error:", err);
-                showToast(`분석 오류: ${err.message || '다시 시도해 주세요.'}`);
-            } finally {
-                clearTimeout(timeoutId);
-                document.getElementById('loadingState').classList.add('hidden');
-                document.getElementById('analyzeBtn').disabled = false;
+            if (titleEl && title) titleEl.innerText = title;
+            if (subEl && subtitle) subEl.innerText = subtitle;
+            if (barEl) barEl.style.width = `${Math.min(100, Math.max(0, Math.round(percent)))}%`;
+            if (pctEl) pctEl.innerText = `${Math.min(100, Math.max(0, Math.round(percent)))}%`;
+            if (iconEl) {
+                if (step === 1) iconEl.className = "fa-solid fa-camera-retro absolute text-indigo-600 text-base";
+                else if (step === 2) iconEl.className = "fa-solid fa-wand-magic-sparkles absolute text-indigo-600 text-base animate-bounce";
             }
         }
 
@@ -1271,7 +1176,7 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
 
             showToast("교재 사진을 준비하는 중입니다...");
 
-            compressImage(file, 1000, 0.80, function(compressedBase64) {
+            compressImage(file, 1200, 0.85, function(compressedBase64) {
                 if (!compressedBase64) {
                     showToast("이미지를 처리할 수 없습니다. 다른 사진을 선택해 주세요.");
                     return;
@@ -1283,7 +1188,6 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
                 showToast("사진이 준비되었습니다. [본문 분석 & 10개 어휘 추출]을 눌러주세요!");
             });
 
-            // Reset input so re-selecting the same file also triggers onchange
             try {
                 event.target.value = '';
             } catch (e) {}
@@ -1415,16 +1319,45 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
             document.getElementById('loadingState').classList.remove('hidden');
             document.getElementById('analyzeBtn').disabled = true;
 
+            let extractedOcrText = "";
+
+            // Step 1: On-Device Tesseract.js OCR (WebAssembly fast browser recognition)
+            try {
+                updateLoadingProgress(1, "1단계: 브라우저 온디바이스 OCR로 사진 텍스트 판독 중...", "기기 내부에서 신속하게 영문 텍스트를 판독합니다.", 15);
+
+                if (window.Tesseract && typeof window.Tesseract.recognize === 'function') {
+                    const ocrResult = await Tesseract.recognize(
+                        activeImageBase64,
+                        'eng',
+                        {
+                            logger: m => {
+                                if (m && m.status === 'recognizing text' && typeof m.progress === 'number') {
+                                    const pct = Math.round(15 + m.progress * 65);
+                                    updateLoadingProgress(1, "1단계: 브라우저 온디바이스 OCR로 사진 텍스트 판독 중...", `텍스트 판독 진행률: ${Math.round(m.progress * 100)}%`, pct);
+                                }
+                            }
+                        }
+                    );
+                    extractedOcrText = (ocrResult && ocrResult.data && ocrResult.data.text) ? ocrResult.data.text.trim() : "";
+                    console.log("[Tesseract.js] On-device extracted text length:", extractedOcrText.length);
+                }
+            } catch (tesseractErr) {
+                console.warn("[Tesseract.js] On-device OCR fallback:", tesseractErr);
+            }
+
+            // Step 2: AI Generation for 10 Vocab & Sentences
+            updateLoadingProgress(2, "2단계: AI가 10개 핵심 어휘 & 영작 문장 생성 중...", "인식된 본문을 분석하여 10개 어휘와 문장 세트를 생성하고 있습니다.", 85);
+
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 90000);
+            const timeoutId = setTimeout(() => controller.abort(), 60000);
 
             try {
                 const response = await fetch('/api/analyze', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        imageBase64: activeImageBase64,
-                        text: '',
+                        text: extractedOcrText,
+                        imageBase64: extractedOcrText.length < 25 ? activeImageBase64 : '',
                         userApiKey: getApiKey()
                     }),
                     signal: controller.signal
@@ -1439,7 +1372,7 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
                 } catch (parseErr) {
                     console.error("Server raw response:", rawText);
                     if (response.status === 504 || response.status === 502) {
-                        throw new Error("클라우드 서버 일시 지연(504). 다시 한 번 [본문 분석]을 눌러주세요.");
+                        throw new Error("서버 일시 지연(504). 다시 한 번 [본문 분석]을 눌러주세요.");
                     }
                     throw new Error("서버 응답을 처리하는 중 오류가 발생했습니다. 다시 시도해 주세요.");
                 }
@@ -1448,17 +1381,17 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
                     throw new Error(result.error || "교재 사진 판독 중 오류가 발생했습니다.");
                 }
 
+                updateLoadingProgress(2, "완료! 학습 데이터를 화면에 표시합니다...", "잠시 후 화면이 전환됩니다.", 100);
+
                 const parsedData = result.data;
-                const extractedText = parsedData.extractedText || parsedData.pureEnglishText || "";
+                const extractedText = parsedData.extractedText || parsedData.pureEnglishText || extractedOcrText || "";
                 if (!extractedText.trim()) {
                     throw new Error("사진에서 읽을 수 있는 교재 텍스트를 찾지 못했습니다. 조금 더 밝고 선명하게 촬영해 주세요.");
                 }
 
-                let vocabList = Array.isArray(parsedData.vocabList) ? parsedData.vocabList : [];
-                if (vocabList.length === 0) {
-                    // Fallback to sample or basic extraction if empty
-                    vocabList = (SAMPLE_LESSON.vocabList || []).slice(0, 10);
-                }
+                let vocabList = Array.isArray(parsedData.vocabList) && parsedData.vocabList.length > 0
+                    ? parsedData.vocabList
+                    : (SAMPLE_LESSON.vocabList || []).slice(0, 10);
 
                 let passageSentences = Array.isArray(parsedData.passageSentences) && parsedData.passageSentences.length > 0
                     ? parsedData.passageSentences
@@ -1480,11 +1413,11 @@ Many people try to make it a rule to exercise regularly in order to stay in shap
 
                 saveLessonToLocalStorage(selectedDate, currentLessonData);
                 showExtractedTextSection();
-                showToast(`사진 속 본문 인식 및 ${currentLessonData.vocabList.length}개 단어/표현, ${currentLessonData.passageSentences.length}개 전체 문장 추출 완료!`);
+                showToast(`온디바이스 OCR 완료! ${currentLessonData.vocabList.length}개 핵심 어휘 & ${currentLessonData.passageSentences.length}개 영작 문장 생성.`);
                 switchTab('vocab');
 
             } catch (err) {
-                console.error("Gemini OCR Analysis Error:", err);
+                console.error("Analysis Error:", err);
                 if (err.name === 'AbortError') {
                     showToast("분석 요청 시간이 초과되었습니다. 다시 한 번 [본문 분석]을 눌러주세요.");
                 } else {
