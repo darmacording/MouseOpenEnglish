@@ -403,8 +403,12 @@
         let currentLessonData = null;
         let activeImageBase64 = null;
         
-        // 🚀 구글 API 공식 메인 표준 모델 적용 (가장 안정적이고 빠름)
-        const GEMINI_MODEL = "gemini-1.5-flash"; 
+        // 🚀 사실관계 재확인(2026.09)을 거친 공식 3.x 메인/안정화 모델 우회(Fallback) 풀
+        const GEMINI_MODELS = [
+            "gemini-3.6-flash",     // 1순위: 현재 API 공식 권장 메인 모델
+            "gemini-3.7-flash",     // 2순위: 가장 최신 하이엔드 예비 모델
+            "gemini-3.5-flash"      // 3순위: 트래픽 분산 및 장애 대비 이전 세대 메인 모델
+        ];
 
         // States
         let currentQuizRound = 1, currentQuizIndex = 0, quizScore = 0, activeQuizQuestions = [];
@@ -444,58 +448,80 @@
         }
 
         // ==========================================
-        // Gemini REST API (클라이언트 다이렉트 통신 & 에러 핸들링 강화)
+        // Gemini REST API (다중 최신 모델 Auto-Fallback 알고리즘 탑재)
         // ==========================================
         async function fetchGeminiDirect(systemInstruction, parts, requireJson = false) {
             const apiKey = getApiKey();
             if (!apiKey) throw new Error("API 설정 메뉴에서 Gemini API 키를 먼저 등록해주세요.");
             
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
-            const payload = {
-                contents: [{ role: "user", parts: parts }],
-                generationConfig: {}
-            };
-            
-            if (systemInstruction) {
-                payload.systemInstruction = { parts: [{ text: systemInstruction }] };
-            }
-            if (requireJson) {
-                payload.generationConfig.responseMimeType = "application/json";
-            }
+            let lastError = null;
 
-            const res = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (!res.ok) {
-                const errText = await res.text();
+            // 모델 배열을 순회하며 접속 시도
+            for (let i = 0; i < GEMINI_MODELS.length; i++) {
+                const currentModel = GEMINI_MODELS[i];
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey}`;
                 
-                // 에러 코드별 맞춤형 한국어 안내
-                if (res.status === 503) {
-                    throw new Error("현재 구글 AI 서버 접속량이 많아 지연되고 있습니다. 5~10초 후 다시 시도해 주세요.");
-                } else if (res.status === 429) {
-                    throw new Error("무료 API 일일 요청 한도를 초과했거나 트래픽이 많습니다. 잠시 후 다시 시도해 주세요.");
-                } else {
-                    throw new Error(`통신 오류 (${res.status}): 다시 시도해 주세요.`);
+                const payload = {
+                    contents: [{ role: "user", parts: parts }],
+                    generationConfig: {}
+                };
+                
+                if (systemInstruction) {
+                    payload.systemInstruction = { parts: [{ text: systemInstruction }] };
                 }
-            }
+                if (requireJson) {
+                    payload.generationConfig.responseMimeType = "application/json";
+                }
 
-            const data = await res.json();
-            if (!data.candidates || data.candidates.length === 0) throw new Error("AI가 응답을 생성하지 못했습니다. 다시 시도해 주세요.");
-            
-            const responseText = data.candidates[0].content.parts[0].text;
-            if (requireJson) {
                 try {
-                    // 간혹 마크다운 코드블록(` ```json `)이 섞여오는 문제 완벽 제거
-                    const cleanJsonStr = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
-                    return JSON.parse(cleanJsonStr);
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!res.ok) {
+                        const errText = await res.text();
+                        
+                        // 503(과부하) 또는 404(모델 없음) 에러 시 다음 예비 모델로 자동 우회
+                        if (res.status === 503 || res.status === 404) {
+                            console.warn(`[우회 시스템] ${currentModel} 모델 접속 실패(${res.status}). 다음 최신 예비 모델로 자동 전환 중...`);
+                            lastError = new Error(`서버 지연 또는 모델 없음 (${res.status})`);
+                            continue; // 다음 3.x 라인업 시도
+                        } else if (res.status === 429) {
+                            throw new Error("요청 한도 초과(429). 잠시 후 다시 시도 바랍니다.");
+                        } else {
+                            throw new Error(`통신 오류 (${res.status}): ${errText}`);
+                        }
+                    }
+
+                    const data = await res.json();
+                    if (!data.candidates || data.candidates.length === 0) throw new Error("AI가 응답을 생성하지 못했습니다.");
+                    
+                    const responseText = data.candidates[0].content.parts[0].text;
+                    if (requireJson) {
+                        try {
+                            const cleanJsonStr = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
+                            return JSON.parse(cleanJsonStr);
+                        } catch (parseErr) {
+                            throw new Error("결과를 분석하는 데 실패했습니다. 본문 사진을 조금 더 선명하게 찍어주세요.");
+                        }
+                    }
+                    
+                    // 정상 처리 완료 시 결과 반환 (Loop 종료)
+                    return responseText;
+
                 } catch (e) {
-                    throw new Error("결과를 분석하는 데 실패했습니다. 본문 사진을 조금 더 선명하게 찍어주세요.");
+                    lastError = e;
+                    // 치명적 오류(할당량 초과 등)는 우회하지 않고 즉시 사용자에게 경고
+                    if (e.message.includes("429") || e.message.includes("통신 오류") || e.message.includes("결과를 분석")) {
+                        throw e; 
+                    }
                 }
             }
-            return responseText;
+            
+            // 모든 메인/예비 모델 우회 접속 실패 시 최종 에러 반환
+            throw new Error(`구글 AI 전체 서버망 접속에 일시적으로 실패했습니다. 잠시 후 재시도 바랍니다. (${lastError?.message || '알 수 없는 오류'})`);
         }
 
         // ==========================================
@@ -527,17 +553,44 @@
         function handleImageSelect(event) {
             const file = event.target.files && event.target.files[0];
             if (!file) return;
-            showToast("사진 준비 중...");
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                activeImageBase64 = e.target.result;
+            showToast("사진 최적화 중...");
+            
+            compressImage(file, 1024, 0.85, function(compressedBase64) {
+                if (!compressedBase64) {
+                    showToast("이미지를 처리할 수 없습니다.");
+                    return;
+                }
+                activeImageBase64 = compressedBase64;
                 document.getElementById('imagePreview').src = activeImageBase64;
                 document.getElementById('uploadPlaceholder').classList.add('hidden');
                 document.getElementById('imagePreviewContainer').classList.remove('hidden');
                 showToast("사진이 준비되었습니다. 분석 버튼을 눌러주세요!");
-            };
-            reader.readAsDataURL(file);
+            });
             event.target.value = '';
+        }
+
+        function compressImage(file, maxDimension, quality, callback) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    let w = img.width, h = img.height;
+                    if (w > maxDimension || h > maxDimension) {
+                        if (w > h) { h = Math.round((h * maxDimension) / w); w = maxDimension; }
+                        else { w = Math.round((w * maxDimension) / h); h = maxDimension; }
+                    }
+                    const canvas = document.createElement('canvas');
+                    canvas.width = w; canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, w, h);
+                    ctx.drawImage(img, 0, 0, w, h);
+                    callback(canvas.toDataURL('image/jpeg', quality));
+                };
+                img.onerror = () => callback(e.target.result);
+                img.src = e.target.result;
+            };
+            reader.onerror = () => callback(null);
+            reader.readAsDataURL(file);
         }
 
         // OCR & 어휘 추출
@@ -575,7 +628,7 @@
                 showToast("분석 완료!");
                 switchTab('vocab');
             } catch (err) {
-                showToast(`오류: ${err.message}`);
+                showToast(err.message);
                 console.error(err);
             } finally {
                 document.getElementById('loadingState').classList.add('hidden');
