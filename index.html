@@ -402,7 +402,9 @@
         let selectedDate = new Date().toISOString().split('T')[0];
         let currentLessonData = null;
         let activeImageBase64 = null;
-        const GEMINI_MODEL = "gemini-3.6-flash"; // 최신 3.6 모델 적용 완료
+        
+        // 🚀 구글 API 공식 메인 표준 모델 적용 (가장 안정적이고 빠름)
+        const GEMINI_MODEL = "gemini-1.5-flash"; 
 
         // States
         let currentQuizRound = 1, currentQuizIndex = 0, quizScore = 0, activeQuizQuestions = [];
@@ -442,7 +444,7 @@
         }
 
         // ==========================================
-        // Gemini REST API (클라이언트 다이렉트 통신 로직)
+        // Gemini REST API (클라이언트 다이렉트 통신 & 에러 핸들링 강화)
         // ==========================================
         async function fetchGeminiDirect(systemInstruction, parts, requireJson = false) {
             const apiKey = getApiKey();
@@ -469,20 +471,28 @@
 
             if (!res.ok) {
                 const errText = await res.text();
-                throw new Error(`API 호출 실패 (${res.status}):${errText}`);
+                
+                // 에러 코드별 맞춤형 한국어 안내
+                if (res.status === 503) {
+                    throw new Error("현재 구글 AI 서버 접속량이 많아 지연되고 있습니다. 5~10초 후 다시 시도해 주세요.");
+                } else if (res.status === 429) {
+                    throw new Error("무료 API 일일 요청 한도를 초과했거나 트래픽이 많습니다. 잠시 후 다시 시도해 주세요.");
+                } else {
+                    throw new Error(`통신 오류 (${res.status}): 다시 시도해 주세요.`);
+                }
             }
 
             const data = await res.json();
-            if (!data.candidates || data.candidates.length === 0) throw new Error("응답을 받지 못했습니다.");
+            if (!data.candidates || data.candidates.length === 0) throw new Error("AI가 응답을 생성하지 못했습니다. 다시 시도해 주세요.");
             
             const responseText = data.candidates[0].content.parts[0].text;
             if (requireJson) {
                 try {
-                    // 간혹 마크다운 코드블록(` ```json `)이 섞여오는 문제 제거
+                    // 간혹 마크다운 코드블록(` ```json `)이 섞여오는 문제 완벽 제거
                     const cleanJsonStr = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
                     return JSON.parse(cleanJsonStr);
                 } catch (e) {
-                    throw new Error("결과를 JSON 포맷으로 분석하는데 실패했습니다.");
+                    throw new Error("결과를 분석하는 데 실패했습니다. 본문 사진을 조금 더 선명하게 찍어주세요.");
                 }
             }
             return responseText;
@@ -530,7 +540,7 @@
             event.target.value = '';
         }
 
-        // OCR & 어휘 추출 (백엔드 제거 및 클라이언트 다이렉트 통신)
+        // OCR & 어휘 추출
         async function analyzePassageWithGemini() {
             if (!activeImageBase64) return showToast("사진을 선택해주세요.");
             document.getElementById('loadingState').classList.remove('hidden');
@@ -626,7 +636,7 @@
                 const prompt = `Explain the native nuance of "${item.english}" (${item.korean}). Include a Konglish warning if applicable. Format response in clean HTML without markdown wrappers.`;
                 const result = await fetchGeminiDirect(null, [{text: prompt}], false);
                 box.innerHTML = `<div class="font-bold text-purple-900 mb-1 border-b border-purple-200 pb-1">AI 뉘앙스 레슨</div>${result}`;
-            } catch(e) { box.innerHTML = `오류: ${e.message}`; }
+            } catch(e) { box.innerHTML = `<p class="text-rose-600">${e.message}</p>`; }
         }
 
         async function fetchGroundedNewsExample(idx) {
@@ -634,17 +644,17 @@
             const box = document.getElementById(`groundedBox-${idx}`);
             if(!box.classList.contains('hidden')) { box.classList.add('hidden'); return; }
             box.classList.remove('hidden');
-            box.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> 글로벌 미디어 검색 중...`;
+            box.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> 검색 중...`;
 
             try {
                 const prompt = `Provide 2 recent real-world examples (like NYT, BBC style) using "${item.english}". Format neatly in HTML.`;
                 const result = await fetchGeminiDirect(null, [{text: prompt}], false);
                 box.innerHTML = `<div class="font-bold text-emerald-900 mb-1 border-b border-emerald-200 pb-1">미디어 쓰임새</div>${result}`;
-            } catch(e) { box.innerHTML = `오류: ${e.message}`; }
+            } catch(e) { box.innerHTML = `<p class="text-rose-600">${e.message}</p>`; }
         }
 
         // ==========================================
-        // 오디오 제어 (Web Speech API Native Fallback)
+        // 오디오 제어 (Web Speech API Native)
         // ==========================================
         function initVoices() {
             if (!('speechSynthesis' in window)) return;
@@ -652,7 +662,6 @@
             bestEnglishVoice = voices.find(v => v.lang === 'en-US' && (v.name.includes('Google') || v.name.includes('Samantha'))) || voices.find(v => v.lang.startsWith('en'));
         }
 
-        // 서버리스 환경에 맞게 브라우저 고음질 TTS 엔진 활용
         function playGeminiStudioAudio() {
             const englishText = currentLessonData?.pureEnglishText || currentLessonData?.extractedText;
             if (!englishText) return showToast("재생할 영어 본문이 없습니다.");
@@ -680,7 +689,7 @@
         }
 
         // ==========================================
-        // 무한 객관식 퀴즈 (동일)
+        // 무한 객관식 퀴즈 
         // ==========================================
         function startNewQuizRound(reset = false) {
             if (!currentLessonData || !currentLessonData.vocabList || currentLessonData.vocabList.length===0) return;
@@ -753,7 +762,7 @@
         }
 
         // ==========================================
-        // 주관식 영작 AI 첨삭 (REST API로 변경)
+        // 주관식 영작 AI 첨삭 
         // ==========================================
         function setupWritingQuiz() {
             if(!currentLessonData || !currentLessonData.passageSentences) return;
@@ -767,7 +776,6 @@
             if(writingList.length === 0) return;
             const item = writingList[writingIndex];
             
-            // Pills Render
             document.getElementById('writingSentencePills').innerHTML = writingList.map((_, i) => `<button onclick="writingIndex=${i};renderWritingQuestion()" class="px-3 py-1 rounded-lg text-xs font-bold ${i===writingIndex ? 'bg-indigo-600 text-white' : 'bg-slate-100'}">${i+1}번</button>`).join('');
             
             document.getElementById('writingKoreanPrompt').innerText = item.korean;
@@ -798,7 +806,7 @@
                 
                 document.getElementById('writingReviewResultCard').classList.remove('hidden');
             } catch(e) {
-                showToast(`첨삭 실패: ${e.message}`);
+                showToast(e.message);
             } finally {
                 document.getElementById('writingReviewLoading').classList.add('hidden');
                 document.getElementById('submitWritingBtn').disabled = false;
@@ -806,7 +814,7 @@
         }
 
         // ==========================================
-        // 플래시카드 & 회화 튜터 (REST API로 변경)
+        // 플래시카드 & 회화 튜터 
         // ==========================================
         function setupPracticeCards() {
             if(!currentLessonData) return;
@@ -857,8 +865,8 @@
                 document.getElementById('chatHistoryBox').innerHTML += `<div class="bg-slate-100 p-3 rounded-xl w-3/4 mb-2 text-sm">${responseText}</div>`;
                 document.getElementById('chatHistoryBox').scrollTop = 9999;
             } catch(e) {
-                showToast(`채팅 오류: ${e.message}`);
-                aiChatHistory.pop(); // Revert user msg on fail
+                showToast(e.message);
+                aiChatHistory.pop(); 
             }
         }
 
